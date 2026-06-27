@@ -1,0 +1,127 @@
+// Données pays pour le sélecteur d'indicatif.
+// Liste large mais volontairement non exhaustive — extensible au besoin.
+// `code` = ISO 3166-1 alpha-2, `dial` = indicatif international (sans +).
+export type Country = { name: string; code: string; dial: string };
+
+export const COUNTRIES: Country[] = [
+  { name: "France", code: "FR", dial: "33" },
+  { name: "Belgique", code: "BE", dial: "32" },
+  { name: "Suisse", code: "CH", dial: "41" },
+  { name: "Luxembourg", code: "LU", dial: "352" },
+  { name: "Canada", code: "CA", dial: "1" },
+  { name: "États-Unis", code: "US", dial: "1" },
+  { name: "Royaume-Uni", code: "GB", dial: "44" },
+  { name: "Allemagne", code: "DE", dial: "49" },
+  { name: "Espagne", code: "ES", dial: "34" },
+  { name: "Italie", code: "IT", dial: "39" },
+  { name: "Portugal", code: "PT", dial: "351" },
+  { name: "Pays-Bas", code: "NL", dial: "31" },
+  { name: "Irlande", code: "IE", dial: "353" },
+  { name: "Autriche", code: "AT", dial: "43" },
+  { name: "Danemark", code: "DK", dial: "45" },
+  { name: "Suède", code: "SE", dial: "46" },
+  { name: "Norvège", code: "NO", dial: "47" },
+  { name: "Finlande", code: "FI", dial: "358" },
+  { name: "Islande", code: "IS", dial: "354" },
+  { name: "Pologne", code: "PL", dial: "48" },
+  { name: "Tchéquie", code: "CZ", dial: "420" },
+  { name: "Slovaquie", code: "SK", dial: "421" },
+  { name: "Hongrie", code: "HU", dial: "36" },
+  { name: "Roumanie", code: "RO", dial: "40" },
+  { name: "Bulgarie", code: "BG", dial: "359" },
+  { name: "Grèce", code: "GR", dial: "30" },
+  { name: "Croatie", code: "HR", dial: "385" },
+  { name: "Slovénie", code: "SI", dial: "386" },
+  { name: "Serbie", code: "RS", dial: "381" },
+  { name: "Bosnie-Herzégovine", code: "BA", dial: "387" },
+  { name: "Albanie", code: "AL", dial: "355" },
+  { name: "Macédoine du Nord", code: "MK", dial: "389" },
+  { name: "Monténégro", code: "ME", dial: "382" },
+  { name: "Ukraine", code: "UA", dial: "380" },
+  { name: "Russie", code: "RU", dial: "7" },
+  { name: "Estonie", code: "EE", dial: "372" },
+  { name: "Lettonie", code: "LV", dial: "371" },
+  { name: "Lituanie", code: "LT", dial: "370" },
+  { name: "Turquie", code: "TR", dial: "90" },
+  { name: "Chypre", code: "CY", dial: "357" },
+  { name: "Malte", code: "MT", dial: "356" },
+  { name: "Maroc", code: "MA", dial: "212" },
+  { name: "Algérie", code: "DZ", dial: "213" },
+  { name: "Tunisie", code: "TN", dial: "216" },
+  { name: "Égypte", code: "EG", dial: "20" },
+  { name: "Sénégal", code: "SN", dial: "221" },
+  { name: "Côte d'Ivoire", code: "CI", dial: "225" },
+  { name: "Cameroun", code: "CM", dial: "237" },
+  { name: "Nigeria", code: "NG", dial: "234" },
+  { name: "Ghana", code: "GH", dial: "233" },
+  { name: "Kenya", code: "KE", dial: "254" },
+  { name: "Afrique du Sud", code: "ZA", dial: "27" },
+  { name: "Mali", code: "ML", dial: "223" },
+  { name: "Burkina Faso", code: "BF", dial: "226" },
+  { name: "Niger", code: "NE", dial: "227" },
+  { name: "Guinée", code: "GN", dial: "224" },
+  { name: "Bénin", code: "BJ", dial: "229" },
+  { name: "Togo", code: "TG", dial: "228" },
+  { name: "Congo (RDC)", code: "CD", dial: "243" },
+  { name: "Madagascar", code: "MG", dial: "261" },
+  { name: "Mexique", code: "MX", dial: "52" },
+  { name: "Brésil", code: "BR", dial: "55" },
+  { name: "Argentine", code: "AR", dial: "54" },
+  { name: "Chili", code: "CL", dial: "56" },
+  { name: "Colombie", code: "CO", dial: "57" },
+  { name: "Pérou", code: "PE", dial: "51" },
+  { name: "Venezuela", code: "VE", dial: "58" },
+  { name: "Équateur", code: "EC", dial: "593" },
+  { name: "Bolivie", code: "BO", dial: "591" },
+  { name: "Uruguay", code: "UY", dial: "598" },
+  { name: "Paraguay", code: "PY", dial: "595" },
+  { name: "Costa Rica", code: "CR", dial: "506" },
+  { name: "Panama", code: "PA", dial: "507" },
+  { name: "République dominicaine", code: "DO", dial: "1" },
+  { name: "Guatemala", code: "GT", dial: "502" },
+  { name: "Cuba", code: "CU", dial: "53" },
+  { name: "Chine", code: "CN", dial: "86" },
+  { name: "Japon", code: "JP", dial: "81" },
+  { name: "Corée du Sud", code: "KR", dial: "82" },
+  { name: "Inde", code: "IN", dial: "91" },
+  { name: "Pakistan", code: "PK", dial: "92" },
+  { name: "Bangladesh", code: "BD", dial: "880" },
+  { name: "Indonésie", code: "ID", dial: "62" },
+  { name: "Malaisie", code: "MY", dial: "60" },
+  { name: "Singapour", code: "SG", dial: "65" },
+  { name: "Thaïlande", code: "TH", dial: "66" },
+  { name: "Vietnam", code: "VN", dial: "84" },
+  { name: "Philippines", code: "PH", dial: "63" },
+  { name: "Hong Kong", code: "HK", dial: "852" },
+  { name: "Taïwan", code: "TW", dial: "886" },
+  { name: "Arabie saoudite", code: "SA", dial: "966" },
+  { name: "Émirats arabes unis", code: "AE", dial: "971" },
+  { name: "Qatar", code: "QA", dial: "974" },
+  { name: "Koweït", code: "KW", dial: "965" },
+  { name: "Bahreïn", code: "BH", dial: "973" },
+  { name: "Oman", code: "OM", dial: "968" },
+  { name: "Israël", code: "IL", dial: "972" },
+  { name: "Jordanie", code: "JO", dial: "962" },
+  { name: "Liban", code: "LB", dial: "961" },
+  { name: "Irak", code: "IQ", dial: "964" },
+  { name: "Iran", code: "IR", dial: "98" },
+  { name: "Australie", code: "AU", dial: "61" },
+  { name: "Nouvelle-Zélande", code: "NZ", dial: "64" },
+];
+
+// Drapeau emoji à partir du code ISO (regional indicator symbols).
+export function flagEmoji(code: string): string {
+  return code
+    .toUpperCase()
+    .replace(/./g, (c) => String.fromCodePoint(127397 + c.charCodeAt(0)));
+}
+
+export function findCountry(code?: string | null): Country | undefined {
+  if (!code) return undefined;
+  const up = code.toUpperCase();
+  return COUNTRIES.find((c) => c.code === up);
+}
+
+// Pays par défaut si la locale de l'appareil est inconnue / absente de la liste.
+export const DEFAULT_COUNTRY: Country =
+  findCountry("FR") ?? COUNTRIES[0];
