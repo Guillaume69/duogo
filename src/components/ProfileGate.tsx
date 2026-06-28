@@ -1,3 +1,4 @@
+import { colors, fontSize, radius, space } from "@/theme";
 import {
   ActivityIndicator,
   Pressable,
@@ -23,7 +24,7 @@ export function ProfileLoadError({ onRetry }: { onRetry: () => void }) {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
-        <Text style={styles.title}>Couldn't load your profile</Text>
+        <Text style={styles.title}>Couldn’t load your profile</Text>
         <Text style={styles.subtitle}>Check your connection and try again.</Text>
         <Pressable
           style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
@@ -38,18 +39,18 @@ export function ProfileLoadError({ onRetry }: { onRetry: () => void }) {
 
 const styles = StyleSheet.create({
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
-  container: { flex: 1, padding: 24 },
-  content: { flex: 1, alignItems: "center", justifyContent: "center", gap: 8 },
-  title: { fontSize: 20, fontWeight: "700" },
-  subtitle: { fontSize: 15, opacity: 0.6, marginBottom: 16, textAlign: "center" },
+  container: { flex: 1, padding: space.xl },
+  content: { flex: 1, alignItems: "center", justifyContent: "center", gap: space.sm },
+  title: { fontSize: fontSize.lg, fontWeight: "700" },
+  subtitle: { fontSize: fontSize.sub, opacity: 0.6, marginBottom: 16, textAlign: "center" },
   button: {
     height: 52,
     paddingHorizontal: 32,
-    borderRadius: 12,
-    backgroundColor: "#111",
+    borderRadius: radius.field,
+    backgroundColor: colors.fillDark,
     alignItems: "center",
     justifyContent: "center",
   },
   buttonPressed: { opacity: 0.7 },
-  buttonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
+  buttonText: { color: colors.textOnDark, fontSize: fontSize.body, fontWeight: "600" },
 });

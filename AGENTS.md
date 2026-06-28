@@ -108,8 +108,14 @@ dessous ne suffit pas. Les étages **coexistent** (additif) — ajouter un étag
 - **Langues.** UI de l'app en **anglais** ; commentaires de code en **français** ; réponses à
   l'utilisateur en **français**.
 - **Aucun design custom** pour l'instant : design **stock des 2 OS**, **maximum d'éléments
-  natifs** (NativeTabs, `@expo/ui`, `expo-symbols`, `expo-image`, `@shopify/flash-list`), le plus
-  fluide possible. App **verrouillée en mode clair** (`userInterfaceStyle: light`).
+  natifs** (NativeTabs, `expo-symbols`, `expo-image`, `@shopify/flash-list`, **drop-ins natifs
+  `@expo/ui`** ex. `@expo/ui/community/picker` ; pour les dates `@react-native-community/datetimepicker`
+  — le datetime-picker `@expo/ui` était janky). **Natif d'abord, priorité absolue** ; custom JS
+  **uniquement en dernier recours** (et si le natif ne sait pas faire, le DIRE, ne pas bricoler).
+  App **verrouillée en mode clair** (`userInterfaceStyle: light`).
+- **Valeurs de style centralisées** dans `src/theme.ts` (tokens : `colors` / `fontSize` /
+  `radius` / `space`). Les `StyleSheet` référencent les tokens — **pas de magic numbers**
+  (`#111`, `fontSize: 16`…) dans les composants. (Tokens ≠ design custom : juste de la cohérence.)
 - **Jamais modifier `auth.users`** → tout passe par une table `profiles` qui la référence (FK).
 - **Coordonnées GPS jamais renvoyées au client** (GRANT colonne + RPC qui ne sort que la distance).
 - **Multi-ville dès le départ** : table `cities` + FK `city_id` partout, jamais de ville en dur

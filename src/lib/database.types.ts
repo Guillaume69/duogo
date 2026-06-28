@@ -39,33 +39,193 @@ export type Database = {
   }
   public: {
     Tables: {
-      profiles: {
+      activities: {
         Row: {
           created_at: string
-          display_name: string | null
+          description: string | null
           id: string
-          updated_at: string
+          name: string
+          slug: string
+          sort_order: number
         }
         Insert: {
           created_at?: string
-          display_name?: string | null
-          id: string
-          updated_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          slug: string
+          sort_order?: number
         }
         Update: {
           created_at?: string
-          display_name?: string | null
+          description?: string | null
           id?: string
-          updated_at?: string
+          name?: string
+          slug?: string
+          sort_order?: number
         }
         Relationships: []
+      }
+      cities: {
+        Row: {
+          center: unknown
+          country_code: string
+          created_at: string
+          id: string
+          name: string
+          slug: string
+        }
+        Insert: {
+          center: unknown
+          country_code: string
+          created_at?: string
+          id?: string
+          name: string
+          slug: string
+        }
+        Update: {
+          center?: unknown
+          country_code?: string
+          created_at?: string
+          id?: string
+          name?: string
+          slug?: string
+        }
+        Relationships: []
+      }
+      profile_activities: {
+        Row: {
+          activity_id: string
+          created_at: string
+          profile_id: string
+        }
+        Insert: {
+          activity_id: string
+          created_at?: string
+          profile_id: string
+        }
+        Update: {
+          activity_id?: string
+          created_at?: string
+          profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profile_activities_activity_id_fkey"
+            columns: ["activity_id"]
+            isOneToOne: false
+            referencedRelation: "activities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profile_activities_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_path: string | null
+          bio: string | null
+          birth_date: string | null
+          city_id: string | null
+          created_at: string
+          device_location: unknown
+          display_name: string | null
+          gender: Database["public"]["Enums"]["gender"] | null
+          id: string
+          onboarding_completed: boolean | null
+          search_location: unknown
+          updated_at: string
+        }
+        Insert: {
+          avatar_path?: string | null
+          bio?: string | null
+          birth_date?: string | null
+          city_id?: string | null
+          created_at?: string
+          device_location?: unknown
+          display_name?: string | null
+          gender?: Database["public"]["Enums"]["gender"] | null
+          id: string
+          onboarding_completed?: boolean | null
+          search_location?: unknown
+          updated_at?: string
+        }
+        Update: {
+          avatar_path?: string | null
+          bio?: string | null
+          birth_date?: string | null
+          city_id?: string | null
+          created_at?: string
+          device_location?: unknown
+          display_name?: string | null
+          gender?: Database["public"]["Enums"]["gender"] | null
+          id?: string
+          onboarding_completed?: boolean | null
+          search_location?: unknown
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      push_tokens: {
+        Row: {
+          created_at: string
+          id: string
+          platform: Database["public"]["Enums"]["push_platform"]
+          token: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          platform: Database["public"]["Enums"]["push_platform"]
+          token: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          platform?: Database["public"]["Enums"]["push_platform"]
+          token?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "push_tokens_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      set_my_location: {
+        Args: { p_lat: number; p_lng: number }
+        Returns: {
+          matched_city_id: string
+          matched_city_name: string
+        }[]
+      }
     }
     Enums: {
       gender: "male" | "female" | "other"

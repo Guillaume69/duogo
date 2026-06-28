@@ -123,12 +123,12 @@ export default function Verify() {
 
       {error && <Text style={styles.errorText}>Wrong code</Text>}
       {resendError && (
-        <Text style={styles.errorText}>Couldn't resend code</Text>
+        <Text style={styles.errorText}>Couldn’t resend code</Text>
       )}
       {loading && <ActivityIndicator style={styles.loader} />}
 
       <View style={styles.resendRow}>
-        <Text style={styles.resendHint}>Didn't get the code? </Text>
+        <Text style={styles.resendHint}>Didn’t get the code? </Text>
         <Pressable onPress={resend} disabled={cooldown > 0} hitSlop={8}>
           <Text style={[styles.resendLink, cooldown > 0 && styles.resendDisabled]}>
             {cooldown > 0 ? `Resend (${cooldown}s)` : "Resend code"}

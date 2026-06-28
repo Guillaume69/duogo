@@ -73,7 +73,7 @@ export default function Login() {
       {showInvalid && <Text style={styles.errorText}>Invalid number</Text>}
       {error && <Text style={styles.errorText}>{error}</Text>}
 
-      <Text style={styles.helper}>We'll text you a verification code.</Text>
+      <Text style={styles.helper}>We’ll text you a verification code.</Text>
 
       <View style={styles.whatsappRow}>
         <Switch value={false} disabled />

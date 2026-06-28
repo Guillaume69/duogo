@@ -1,4 +1,5 @@
 import { useProfile } from "@/lib/profile";
+import { colors, fontSize, radius, space } from "@/theme";
 import { useState } from "react";
 import {
   KeyboardAvoidingView,
@@ -59,7 +60,7 @@ export default function Onboarding() {
               setError(null);
             }}
             placeholder="Username"
-            placeholderTextColor="#9aa0a6"
+            placeholderTextColor={colors.textFaint}
             autoFocus
             autoCapitalize="none"
             autoCorrect={false}
@@ -84,28 +85,28 @@ export default function Onboarding() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 24 },
+  container: { flex: 1, padding: space.xl },
   flex: { flex: 1 },
-  content: { flex: 1, justifyContent: "center", gap: 8 },
-  title: { fontSize: 28, fontWeight: "700" },
-  subtitle: { fontSize: 15, opacity: 0.6, marginBottom: 16 },
+  content: { flex: 1, justifyContent: "center", gap: space.sm },
+  title: { fontSize: fontSize.xxl, fontWeight: "700" },
+  subtitle: { fontSize: fontSize.sub, opacity: 0.6, marginBottom: 16 },
   input: {
     height: 52,
     borderWidth: 1,
-    borderColor: "#d0d0d0",
-    borderRadius: 12,
+    borderColor: colors.border,
+    borderRadius: radius.field,
     paddingHorizontal: 16,
-    fontSize: 16,
-    color: "#111",
+    fontSize: fontSize.body,
+    color: colors.text,
   },
-  error: { color: "#e5484d", fontSize: 13, marginTop: 8 },
+  error: { color: colors.danger, fontSize: fontSize.hint, marginTop: space.sm },
   button: {
     height: 52,
-    borderRadius: 12,
-    backgroundColor: "#111",
+    borderRadius: radius.field,
+    backgroundColor: colors.fillDark,
     alignItems: "center",
     justifyContent: "center",
   },
-  buttonDisabled: { backgroundColor: "#c4c4c4" },
-  buttonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
+  buttonDisabled: { backgroundColor: colors.disabled },
+  buttonText: { color: colors.textOnDark, fontSize: fontSize.body, fontWeight: "600" },
 });

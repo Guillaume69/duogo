@@ -36,7 +36,20 @@
           }
         }
       ],
-      "expo-localization"
+      "expo-localization",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "DuoGo uses your location to find activity partners near you."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "DuoGo accesses your photos to let you set a profile picture."
+        }
+      ],
+      "@react-native-community/datetimepicker"
     ],
     "experiments": {
       "typedRoutes": true,

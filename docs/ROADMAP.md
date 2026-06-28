@@ -49,19 +49,25 @@ On teste en dev avec le **numéro de test** `0600000000` → code `123456` (Twil
 
 ## Brique 2 — Profil complet + géoloc + cities + activités
 *But : un profil riche, géolocalisé, avec centres d'intérêt et photo.*
-- [ ] Table `cities` + seed (1 ville)
-- [ ] Table `activities` (seed) + `profile_activities` + RLS
-- [ ] Colonnes profil : `bio`, `gender`, `birth_date` (≥18), `avatar_path`, `device/search_location` (geo + GIST), `city_id` + **GRANT** masquant le GPS
-- [ ] Bucket Storage `avatars` + policies
-- [ ] Table `push_tokens` + RLS
-- [ ] `LocationProvider` (GPS one-shot + reverse-geocode → `city_id`)
-- [ ] Écran **Edit profile** (avatar via picker + upload `ArrayBuffer`, nom, bio, genre, date naissance, intérêts multi-select)
-- **✅ Acceptation** : tous les champs persistent et survivent au redémarrage ; avatar visible ; ville dérivée du GPS.
+- [x] Table `cities` + seed (**Khon Kaen, TH**) *(migration `…160000`)*
+- [x] Table `activities` (seed 12) + `profile_activities` + RLS *(migration `…160000`)*
+- [x] Colonnes profil : `bio`, `gender`, `birth_date` (≥18), `avatar_path`, `device/search_location` (geo + GIST), `city_id` + `onboarding_completed` (générée) + **GRANT colonne masquant le GPS** *(migration `…161000`)*
+- [x] Bucket Storage `avatars` (privé) + policies dossier `<uid>/` *(migration `…162000`)*
+- [x] Table `push_tokens` + RLS *(migration `…163000`, exploitée brique 8)*
+- [x] `LocationProvider` (GPS one-shot → **RPC `set_my_location`** qui dérive `city_id` par jointure spatiale côté serveur, rayon 50 km — plus robuste qu'un matching de chaîne ; les coords ne sortent jamais)
+- [x] Écran **Edit profile** (avatar via picker + upload `fetch().arrayBuffer()`, name, **gender** + **date of birth** ajoutés (matching/≥18), location GPS, bio, intérêts en chips) + Account enrichi + composant `Avatar` (URL signée **cachée** -> pas de flash au retour)
+- [x] **Composants natifs** : `@expo/ui` (segmented + datetime) était janky (blanc/blanc, lag) -> remplacés par `@react-native-segmented-control/segmented-control` + `@react-native-community/datetimepicker` (vrais natifs). **Rebuild natif fait** (`BUILD SUCCESSFUL`, APK installé).
+- **⏳ Acceptation (à valider sur device au retour)** : tous les champs persistent ; avatar visible (sans flash) ; ville dérivée du GPS (Khon Kaen) ; gender + DOB natifs lisibles/fluides.
+- **Revue adversariale** (2 agents) faite ; corrigés : B1 onboarding 42501 (update au lieu d'upsert), perte d'activités au Save (`activitiesLoaded`), Account intérêts périmés (`useEffect [profile]`), sync géoloc↔contexte (`applyProfile` à la capture), flash avatar au changement de path, statut géoloc périmé, double-tap Save (`useRef`), timeout GPS.
+- **⚠️ Différé (nécessite redéploiement/brique 3)** :
+  - **DOB exacte** lisible par tout authentifié (policy `using(true)` + grant SELECT `birth_date`) -> **brique 3** : ne renvoyer que l'âge via la RPC de browse + lecture du profil propre via RPC dédiée.
+  - Save multi-call **non atomique** + anciens avatars orphelins dans le bucket -> futur RPC `save_profile` atomique + cleanup.
+- **Décision avatars** : bucket **privé** + **URLs signées** (créées à la volée par chaque viewer, TTL 1 h, cachées côté client). expo-image cache les octets -> pas d'avatar manquant. Pour les **listes** (Browse People), utiliser **`createSignedUrls` (batch, pluriel)** = 1 seul appel pour N avatars.
 
 ## Brique 3 — Browse People + filtres + fiche personne
 *But : découvrir les gens autour de soi.*
 - [ ] RPC `find_nearby_people` (PostGIS, même `city_id`, distance, filtres genre/âge/activités, renvoie distance + `deja_invite`)
-- [ ] Explore → **People** (FlashList de `PersonRow` : avatar, `ville • km`, chips, badge « Invited »)
+- [ ] Explore → **People** (FlashList de `PersonRow` : avatar, `ville • km`, chips, badge « Invited ») — avatars via **`createSignedUrls` batch** (1 appel pour toute la page)
 - [ ] Écran **Filter By** en sheet (`@expo/ui` slider distance, activités multi, âge, genre)
 - [ ] Fiche `person/[id]` (+ bouton « Invite to Activity »)
 - **✅ Acceptation** : liste des gens proches ; le filtre change les résultats ; tap → fiche.
