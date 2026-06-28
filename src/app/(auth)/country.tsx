@@ -36,15 +36,15 @@ export default function CountryPicker() {
     <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
       <View style={styles.header}>
         <Pressable onPress={() => router.back()} hitSlop={12}>
-          <Text style={styles.back}>‹ Retour</Text>
+          <Text style={styles.back}>‹ Back</Text>
         </Pressable>
-        <Text style={styles.title}>Pays</Text>
+        <Text style={styles.title}>Country</Text>
         <View style={styles.headerSpacer} />
       </View>
 
       <TextInput
         style={styles.search}
-        placeholder="Rechercher un pays ou un indicatif…"
+        placeholder="Search a country or dial code…"
         placeholderTextColor="#9aa0a6"
         value={query}
         onChangeText={setQuery}
@@ -64,7 +64,7 @@ export default function CountryPicker() {
             {item.code === country.code && <Text style={styles.check}>✓</Text>}
           </Pressable>
         )}
-        ListEmptyComponent={<Text style={styles.empty}>Aucun résultat</Text>}
+        ListEmptyComponent={<Text style={styles.empty}>No results</Text>}
       />
     </SafeAreaView>
   );

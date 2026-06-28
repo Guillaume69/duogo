@@ -45,7 +45,7 @@ export default function Login() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.title}>Connexion / Inscription</Text>
+      <Text style={styles.title}>Log in or sign up</Text>
 
       <View style={[styles.inputRow, showInvalid && styles.inputRowError]}>
         <Pressable style={styles.countryButton} onPress={() => router.push("/country")}>
@@ -60,7 +60,7 @@ export default function Login() {
             setInput(t);
             setError(null);
           }}
-          placeholder="Ton numéro de téléphone"
+          placeholder="Your phone number"
           placeholderTextColor="#9aa0a6"
           keyboardType="phone-pad"
           textContentType="telephoneNumber"
@@ -70,14 +70,14 @@ export default function Login() {
         />
       </View>
 
-      {showInvalid && <Text style={styles.errorText}>Numéro invalide</Text>}
+      {showInvalid && <Text style={styles.errorText}>Invalid number</Text>}
       {error && <Text style={styles.errorText}>{error}</Text>}
 
-      <Text style={styles.helper}>On t'envoie un code de vérification par SMS.</Text>
+      <Text style={styles.helper}>We'll text you a verification code.</Text>
 
       <View style={styles.whatsappRow}>
         <Switch value={false} disabled />
-        <Text style={styles.whatsappLabel}>Envoyer le code via WhatsApp (bientôt)</Text>
+        <Text style={styles.whatsappLabel}>Send code via WhatsApp (soon)</Text>
       </View>
 
       <View style={styles.spacer} />
@@ -90,7 +90,7 @@ export default function Login() {
         {loading ? (
           <ActivityIndicator color="#fff" />
         ) : (
-          <Text style={styles.buttonText}>Continuer</Text>
+          <Text style={styles.buttonText}>Continue</Text>
         )}
       </Pressable>
     </SafeAreaView>

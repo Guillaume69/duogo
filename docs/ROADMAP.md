@@ -26,12 +26,14 @@ On teste en dev avec le **numéro de test** `0600000000` → code `123456` (Twil
 *But : poser les outils (libs natives, Supabase CLI/migrations, EAS, types générés). Pas d'écran.*
 - [x] Installer les libs natives (`expo-location`, `expo-notifications`, `expo-image-picker`, `@shopify/flash-list`)
 - [x] Installer la CLI Supabase (devDep)
-- [ ] **(toi)** `npx supabase login` puis link au projet (login interactif)
-- [ ] **(toi)** `npx eas init` → `projectId` dans `app.json` (login interactif)
-- [ ] `supabase init` + 1re migration : **PostGIS**, enums (`gender`, `time_slot`, `invitation_status`, `push_platform`), helper `touch_updated_at()`
-- [ ] Script `db:types` → générer `src/lib/database.types.ts` + passer à `createClient<Database>`
-- [ ] **Rebuild natif** (`npx expo run:android`) pour embarquer les nouveaux modules
-- [ ] Migrer les écrans d'auth existants **FR → EN** (`login`/`verify`/`country`/home)
+- [x] `npx supabase login` + `supabase link` au projet `iyantsbthzjawcxfodfb`
+- [ ] **(toi)** `npx eas init` → `projectId` dans `app.json` *(reporté à la brique 8 / push)*
+- [x] `supabase init` + 1re migration écrite : **PostGIS**, enums (`gender`, `time_slot`, `invitation_status`, `push_platform`), helper `touch_updated_at()`
+- [x] `npx supabase db push` (migration appliquée au projet distant — le warning pg-delta est cosmétique)
+- [x] Script `db:types` ajouté à `package.json`
+- [x] Généré `src/lib/database.types.ts` (4 enums présents) + client en `createClient<Database>`
+- [ ] **(toi) Rebuild natif** (`source ~/android-build/env.sh && npx expo run:android`) pour embarquer les nouveaux modules
+- [x] Migrer les écrans d'auth existants **FR → EN** (`login`/`verify`/`country`/home)
 - **✅ Acceptation** : l'app rebuild et démarre ; `supabase.from('profiles')` est typé (zéro `as`).
 
 ## Brique 1 — Shell (onglets natifs) + profils + onboarding + Account

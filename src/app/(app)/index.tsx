@@ -19,8 +19,8 @@ export default function Home() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
-        <Text style={styles.title}>Connecté ✅</Text>
-        <Text style={styles.subtitle}>Bienvenue sur DuoGo</Text>
+        <Text style={styles.title}>You're in ✅</Text>
+        <Text style={styles.subtitle}>Welcome to DuoGo</Text>
         {phone && <Text style={styles.phone}>{phone}</Text>}
       </View>
 
@@ -30,7 +30,7 @@ export default function Home() {
         disabled={signingOut}
       >
         <Text style={styles.buttonText}>
-          {signingOut ? "Déconnexion…" : "Se déconnecter"}
+          {signingOut ? "Signing out…" : "Sign out"}
         </Text>
       </Pressable>
     </SafeAreaView>

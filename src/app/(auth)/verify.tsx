@@ -77,9 +77,9 @@ export default function Verify() {
         <Text style={styles.backText}>‹</Text>
       </Pressable>
 
-      <Text style={styles.title}>Code de vérification</Text>
+      <Text style={styles.title}>Verification code</Text>
       <Text style={styles.subtitle}>
-        Entre le code envoyé au{"\n"}
+        Enter the code sent to{"\n"}
         <Text style={styles.phone}>{prettyPhone}</Text>
       </Text>
 
@@ -111,14 +111,14 @@ export default function Verify() {
         />
       </Pressable>
 
-      {error && <Text style={styles.errorText}>Code incorrect</Text>}
+      {error && <Text style={styles.errorText}>Wrong code</Text>}
       {loading && <ActivityIndicator style={styles.loader} />}
 
       <View style={styles.resendRow}>
-        <Text style={styles.resendHint}>Pas reçu le code ? </Text>
+        <Text style={styles.resendHint}>Didn't get the code? </Text>
         <Pressable onPress={resend} disabled={cooldown > 0} hitSlop={8}>
           <Text style={[styles.resendLink, cooldown > 0 && styles.resendDisabled]}>
-            {cooldown > 0 ? `Renvoyer (${cooldown}s)` : "Renvoyer le code"}
+            {cooldown > 0 ? `Resend (${cooldown}s)` : "Resend code"}
           </Text>
         </Pressable>
       </View>
