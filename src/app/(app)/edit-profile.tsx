@@ -3,7 +3,6 @@ import { AvatarPicker } from "@/components/AvatarPicker";
 import { BirthDateField } from "@/components/BirthDateField";
 import { FieldLabel } from "@/components/FieldLabel";
 import { GenderField } from "@/components/GenderField";
-import { LocationField } from "@/components/LocationField";
 import { useEditProfileForm } from "@/lib/useEditProfileForm";
 import { colors, fontSize, radius, space } from "@/theme";
 import {
@@ -61,15 +60,6 @@ export default function EditProfile() {
           value={form.birthDate}
           onChange={form.setBirthDate}
           maxDate={form.maxBirthDate}
-        />
-
-        <FieldLabel>LOCATION</FieldLabel>
-        <LocationField
-          cityName={form.cityName}
-          status={form.locStatus}
-          captureAttempted={form.captureAttempted}
-          hasCity={form.hasCity}
-          onPress={form.onCaptureLocation}
         />
 
         <FieldLabel>BIO</FieldLabel>

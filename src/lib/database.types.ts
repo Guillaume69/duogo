@@ -74,6 +74,7 @@ export type Database = {
           id: string
           name: string
           slug: string
+          timezone: string
         }
         Insert: {
           center: unknown
@@ -82,6 +83,7 @@ export type Database = {
           id?: string
           name: string
           slug: string
+          timezone?: string
         }
         Update: {
           center?: unknown
@@ -90,6 +92,7 @@ export type Database = {
           id?: string
           name?: string
           slug?: string
+          timezone?: string
         }
         Relationships: []
       }
@@ -138,7 +141,6 @@ export type Database = {
           gender: Database["public"]["Enums"]["gender"] | null
           id: string
           onboarding_completed: boolean | null
-          search_location: unknown
           updated_at: string
         }
         Insert: {
@@ -152,7 +154,6 @@ export type Database = {
           gender?: Database["public"]["Enums"]["gender"] | null
           id: string
           onboarding_completed?: boolean | null
-          search_location?: unknown
           updated_at?: string
         }
         Update: {
@@ -166,7 +167,6 @@ export type Database = {
           gender?: Database["public"]["Enums"]["gender"] | null
           id?: string
           onboarding_completed?: boolean | null
-          search_location?: unknown
           updated_at?: string
         }
         Relationships: [
@@ -219,12 +219,68 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      find_nearby_people: {
+        Args: {
+          p_activity_ids?: string[]
+          p_age_maxs?: number[]
+          p_age_mins?: number[]
+          p_genders?: Database["public"]["Enums"]["gender"][]
+          p_limit?: number
+          p_offset?: number
+          p_radius_km?: number
+        }
+        Returns: {
+          activity_ids: string[]
+          activity_names: string[]
+          age: number
+          avatar_path: string
+          city_id: string
+          display_name: string
+          distance_m: number
+          gender: Database["public"]["Enums"]["gender"]
+          id: string
+        }[]
+      }
+      get_my_profile: {
+        Args: never
+        Returns: {
+          avatar_path: string
+          bio: string
+          birth_date: string
+          city_id: string
+          created_at: string
+          display_name: string
+          gender: Database["public"]["Enums"]["gender"]
+          id: string
+          onboarding_completed: boolean
+          updated_at: string
+        }[]
+      }
+      get_person: {
+        Args: { p_id: string }
+        Returns: {
+          activity_ids: string[]
+          activity_names: string[]
+          age: number
+          avatar_path: string
+          bio: string
+          city_id: string
+          display_name: string
+          distance_m: number
+          gender: Database["public"]["Enums"]["gender"]
+          id: string
+        }[]
+      }
       set_my_location: {
         Args: { p_lat: number; p_lng: number }
         Returns: {
           matched_city_id: string
           matched_city_name: string
         }[]
+      }
+      snapped_distance_m: {
+        Args: { p_origin: unknown; p_target: unknown }
+        Returns: number
       }
     }
     Enums: {

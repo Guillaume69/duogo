@@ -4,27 +4,24 @@ import {
   setMyActivities,
   type Activity,
 } from "@/data/activities";
-import { fetchCity } from "@/data/cities";
 import { uploadAvatar } from "@/data/avatars";
 import { updateProfile, type ProfileEdit } from "@/data/profiles";
 import type { Enums } from "@/lib/database.types";
-import { useLocation } from "@/lib/location";
-import {
-  formatBirthDate,
-  parseBirthDate,
-} from "@/lib/profile-fields";
+import { formatBirthDate, parseBirthDate } from "@/lib/profile-fields";
 import { useProfile } from "@/lib/profile";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 // Toute la logique de l'écran Edit profile : état du formulaire, chargement,
-// capture GPS, sélection d'avatar et orchestration du Save. L'écran ne fait que
-// câbler ce hook à des composants de champ présentationnels.
+// sélection d'avatar et orchestration du Save. L'écran ne fait que câbler ce hook
+// à des composants de champ présentationnels.
+//
+// NB : plus de champ « localisation » ici — la position est désormais capturée
+// AUTOMATIQUEMENT à l'entrée de Browse (cf. onglet Explore), plus un réglage manuel.
 export function useEditProfileForm() {
   const router = useRouter();
   const { profile, applyProfile } = useProfile();
-  const { capture, status: locStatus } = useLocation();
 
   const [name, setName] = useState(profile?.display_name ?? "");
   const [bio, setBio] = useState(profile?.bio ?? "");
@@ -34,8 +31,6 @@ export function useEditProfileForm() {
   const [birthDate, setBirthDate] = useState<Date | null>(
     parseBirthDate(profile?.birth_date ?? null),
   );
-  const [cityId, setCityId] = useState<string | null>(profile?.city_id ?? null);
-  const [cityName, setCityName] = useState<string | null>(null);
   // Avatar choisi localement (URI), uploadé seulement au Save.
   const [pickedAvatar, setPickedAvatar] = useState<{
     uri: string;
@@ -48,9 +43,6 @@ export function useEditProfileForm() {
   // Save (sinon setMyActivities([]) supprimerait toutes les activités du serveur).
   const [activitiesLoaded, setActivitiesLoaded] = useState(false);
 
-  // Le statut géoloc vit dans le provider (persistant) -> on ne montre ses hints que
-  // si l'utilisateur a tenté une capture DANS cette session de l'écran.
-  const [captureAttempted, setCaptureAttempted] = useState(false);
   const [saving, setSaving] = useState(false);
   // Garde synchrone anti double-tap (le state `saving` ne se voit qu'au render suivant).
   const savingRef = useRef(false);
@@ -64,7 +56,7 @@ export function useEditProfileForm() {
     return new Date(t.getFullYear() - 18, t.getMonth(), t.getDate());
   }, []);
 
-  // Chargement : catalogue d'activités + sélection courante + nom de la ville.
+  // Chargement : catalogue d'activités + sélection courante.
   useEffect(() => {
     if (!userId) return;
     let cancelled = false;
@@ -83,19 +75,10 @@ export function useEditProfileForm() {
         // aux liaisons d'activités (on ne risque pas de les effacer).
         console.error("load activities failed", e);
       }
-      if (cityId) {
-        try {
-          const city = await fetchCity(cityId);
-          if (!cancelled && city) setCityName(city.name);
-        } catch {
-          /* non bloquant */
-        }
-      }
     })();
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
   const trimmedName = name.trim();
@@ -111,17 +94,6 @@ export function useEditProfileForm() {
     setSelectedActivityIds((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
     );
-  }
-
-  async function onCaptureLocation() {
-    setCaptureAttempted(true);
-    const resolved = await capture();
-    if (!resolved) return; // permission refusée / erreur -> reflété par locStatus
-    setCityId(resolved.cityId);
-    setCityName(resolved.cityName);
-    // La RPC a DÉJÀ persisté la position + city_id côté serveur -> on synchronise le
-    // contexte tout de suite (que l'utilisateur save ou non, l'app reste cohérente).
-    if (profile) applyProfile({ ...profile, city_id: resolved.cityId });
   }
 
   async function onPickAvatar() {
@@ -197,12 +169,6 @@ export function useEditProfileForm() {
     avatarPath: profile?.avatar_path ?? null,
     pickedAvatarUri: pickedAvatar?.uri ?? null,
     onPickAvatar,
-    // localisation
-    cityName,
-    hasCity: cityId !== null,
-    locStatus,
-    captureAttempted,
-    onCaptureLocation,
     // activités
     activities,
     selectedActivityIds,

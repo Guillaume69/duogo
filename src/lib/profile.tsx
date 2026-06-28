@@ -56,7 +56,7 @@ export function ProfileProvider({ children }: PropsWithChildren) {
       setLoading(true);
       setError(false);
       try {
-        const data = await fetchProfile(userId);
+        const data = await fetchProfile();
         if (cancelled) return;
         // data peut légitimement être null (ligne pas encore créée) -> onboarding.
         setProfile(data);

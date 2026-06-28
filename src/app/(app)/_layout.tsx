@@ -1,4 +1,5 @@
 import { ProfileLoadError, ProfileLoading } from "@/components/ProfileGate";
+import { FilterProvider } from "@/lib/filters";
 import { LocationProvider } from "@/lib/location";
 import { ProfileProvider, useProfile } from "@/lib/profile";
 import { Stack } from "expo-router";
@@ -8,7 +9,9 @@ export default function AppLayout() {
   return (
     <ProfileProvider>
       <LocationProvider>
-        <AppNavigator />
+        <FilterProvider>
+          <AppNavigator />
+        </FilterProvider>
       </LocationProvider>
     </ProfileProvider>
   );
@@ -36,6 +39,20 @@ function AppNavigator() {
         <Stack.Screen
           name="edit-profile"
           options={{ headerShown: true, title: "Edit profile" }}
+        />
+        {/* Fiche d'une personne (poussée depuis Browse) ; titre = pseudo, fixé par l'écran. */}
+        <Stack.Screen
+          name="person/[id]"
+          options={{ headerShown: true, title: "Profile" }}
+        />
+        {/* Filtres de Browse, présentés en modale au-dessus des onglets. */}
+        <Stack.Screen
+          name="filter"
+          options={{
+            presentation: "modal",
+            headerShown: true,
+            title: "Filter by",
+          }}
         />
       </Stack.Protected>
     </Stack>

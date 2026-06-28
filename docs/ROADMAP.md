@@ -16,8 +16,9 @@ On teste en dev avec le **numéro de test** `0600000000` → code `123456` (Twil
 - **Backend** : **Supabase au maximum** (PostgREST + RLS + RPC + Realtime + Storage). Le **seul**
   bout serveur = une **Edge Function** pour les push. Pas de backend dédié pour le MVP.
 - **Navigation** : onglets **natifs** (`expo-router/unstable-native-tabs`), Explore / Inbox / Account.
-- **Géoloc** : GPS → ville (reverse-geocode) → `city_id`. Matching **intra-ville**, distances PostGIS.
-  Archi **multi-ville** dès le départ (table `cities`) ; choisir une autre ville = premium plus tard.
+- **Géoloc** : GPS → `city_id` (centre seedé le plus proche dans 50 km), pas de reverse-geocode.
+  Matching **intra-ville**, distances PostGIS. Archi **multi-ville** dès le départ (table `cities`) ;
+  choisir une autre ville = premium plus tard. ⚠ Voir [Dette technique](#dette-technique-connue) (résolution de ville).
 - **Modèle** : pas de table `matches` — la **conversation EST le match**.
 
 ---
@@ -56,21 +57,23 @@ On teste en dev avec le **numéro de test** `0600000000` → code `123456` (Twil
 - [x] Table `push_tokens` + RLS *(migration `…163000`, exploitée brique 8)*
 - [x] `LocationProvider` (GPS one-shot → **RPC `set_my_location`** qui dérive `city_id` par jointure spatiale côté serveur, rayon 50 km — plus robuste qu'un matching de chaîne ; les coords ne sortent jamais)
 - [x] Écran **Edit profile** (avatar via picker + upload `fetch().arrayBuffer()`, name, **gender** + **date of birth** ajoutés (matching/≥18), location GPS, bio, intérêts en chips) + Account enrichi + composant `Avatar` (URL signée **cachée** -> pas de flash au retour)
-- [x] **Composants natifs** : `@expo/ui` (segmented + datetime) était janky (blanc/blanc, lag) -> remplacés par `@react-native-segmented-control/segmented-control` + `@react-native-community/datetimepicker` (vrais natifs). **Rebuild natif fait** (`BUILD SUCCESSFUL`, APK installé).
-- **⏳ Acceptation (à valider sur device au retour)** : tous les champs persistent ; avatar visible (sans flash) ; ville dérivée du GPS (Khon Kaen) ; gender + DOB natifs lisibles/fluides.
+- [x] **Composants natifs** (priorité absolue au natif) : **date of birth** = `@react-native-community/datetimepicker` ; **gender** = ligne cohérente + **bottom-sheet native `@expo/ui`** (`@expo/ui/community/bottom-sheet`, Material 3, `backgroundStyle` clair + `handleComponent={null}` + `enablePanDownToClose`). Tokens de style dans `src/theme.ts`. (Tâtonné via segmented/picker avant d'aboutir — leçon : natif d'abord, voir mémoire.)
+- **✅ Acceptation OK** : testé sur device (champs persistent, avatar sans flash, ville Khon Kaen via GPS, gender/DOB natifs). **Commité + poussé (`1aed5db`).**
 - **Revue adversariale** (2 agents) faite ; corrigés : B1 onboarding 42501 (update au lieu d'upsert), perte d'activités au Save (`activitiesLoaded`), Account intérêts périmés (`useEffect [profile]`), sync géoloc↔contexte (`applyProfile` à la capture), flash avatar au changement de path, statut géoloc périmé, double-tap Save (`useRef`), timeout GPS.
 - **⚠️ Différé (nécessite redéploiement/brique 3)** :
   - **DOB exacte** lisible par tout authentifié (policy `using(true)` + grant SELECT `birth_date`) -> **brique 3** : ne renvoyer que l'âge via la RPC de browse + lecture du profil propre via RPC dédiée.
   - Save multi-call **non atomique** + anciens avatars orphelins dans le bucket -> futur RPC `save_profile` atomique + cleanup.
 - **Décision avatars** : bucket **privé** + **URLs signées** (créées à la volée par chaque viewer, TTL 1 h, cachées côté client). expo-image cache les octets -> pas d'avatar manquant. Pour les **listes** (Browse People), utiliser **`createSignedUrls` (batch, pluriel)** = 1 seul appel pour N avatars.
 
-## Brique 3 — Browse People + filtres + fiche personne
+## Brique 3 — Browse People + filtres + fiche personne ✅
 *But : découvrir les gens autour de soi.*
-- [ ] RPC `find_nearby_people` (PostGIS, même `city_id`, distance, filtres genre/âge/activités, renvoie distance + `deja_invite`)
-- [ ] Explore → **People** (FlashList de `PersonRow` : avatar, `ville • km`, chips, badge « Invited ») — avatars via **`createSignedUrls` batch** (1 appel pour toute la page)
-- [ ] Écran **Filter By** en sheet (`@expo/ui` slider distance, activités multi, âge, genre)
-- [ ] Fiche `person/[id]` (+ bouton « Invite to Activity »)
-- **✅ Acceptation** : liste des gens proches ; le filtre change les résultats ; tap → fiche.
+- [x] RPC `find_nearby_people` (PostGIS, même `city_id`, distance, filtres genre/âge multi/activités) — **anti-trilatération** (snap grille ~1 km + arrondi 500 m), jamais de coordonnées. *(`deja_invite` reporté en brique 4 : pas encore de table `invitations`.)*
+- [x] **Durcissement DOB** (différé brique 2) : `revoke select(birth_date)` + `get_my_profile()` (lecture du profil propre) ; le browse ne renvoie que l'âge (int).
+- [x] Position **automatique** (GPS live au montage d'Explore, dernière position connue en cache) ; colonne `search_location` retirée (YAGNI).
+- [x] Explore → **People** (FlashList de `PersonRow` : avatar, `ville · âge · ~km`, chips, communes mises en avant) + segmented **People | Activities** — avatars via **`createSignedUrls` batch** (1 appel pour toute la page)
+- [x] Écran **Filter By** en sheet (`@expo/ui` slider distance, activités multi, **âge multi**, genre multi)
+- [x] Fiche `person/[id]` (avatar, méta, About + Read More, Interests, bouton « Invite to Activity » inactif jusqu'à la brique 4) via RPC `get_person`
+- **✅ Acceptation** : liste des gens proches ; le filtre change les résultats ; tap → fiche. **Testé sur device.**
 
 ## Brique 4 — Envoi d'invitation
 *But : inviter quelqu'un à une activité.*
@@ -110,6 +113,37 @@ On teste en dev avec le **numéro de test** `0600000000` → code `123456` (Twil
 - [ ] Prérequis **FCM** (Android) / **APNs** (iOS) chez EAS
 - [ ] Activer **Modify** (statut `changes_requested` + `proposed_*` + RPC)
 - **✅ Acceptation** : invitation/message → push ; tap deep-link ouvre le bon écran ; bannière in-app en foreground.
+
+---
+
+## Dette technique connue
+
+### Résolution GPS → ville = nearest-center (à revoir avant la 2ᵉ ville)
+Aujourd'hui `set_my_location` rattache un point GPS à une ville par **« centre seedé le plus proche
+dans un rayon de 50 km »** (`ST_DWithin(c.center, point, 50000)` + `order by ST_Distance limit 1`,
+sinon `city_id = NULL`). Chaque ville n'est qu'**un point-centre** (`cities.center`), **pas un
+polygone de frontière** — on ne teste donc jamais si le point est réellement *dans* la ville.
+
+- **OK pour le MVP** : avec **une seule ville**, tout point à ≤ 50 km de Khon Kaen → Khon Kaen ;
+  au-delà → « hors zone ». Aucun risque de confusion de villes (il n'y a qu'un centre).
+- **Casse en multi-ville** : nearest-center = partition de **Voronoï** → la frontière entre 2 villes
+  est la **médiatrice** de leurs centres, pas la vraie limite. Faux près des frontières, surtout si
+  les villes ont des **tailles différentes** ou si le **rayon uniforme de 50 km** ne colle pas.
+- **Correctif (le jour où on seede la ville #2, surtout si 2 villes sont à < ~100 km)** : passer à
+  des **polygones de frontière** — colonne `cities.boundary geography(MultiPolygon)` (contours
+  OSM/GADM) + test `ST_Covers(boundary, point)`, avec index GiST. Étape intermédiaire possible :
+  un `radius_m` **par ville** au lieu des 50 km fixes. L'archi (`city_id` FK partout) permet de
+  **changer uniquement la méthode de résolution** sans rien casser ailleurs.
+- **Aussi** : le plan initial mentionnait un **reverse-geocoding** (`reverseGeocodeAsync → city_id`)
+  jamais implémenté — le client envoie juste `lat/lng` à `set_my_location`. Alternative robuste aux
+  frontières si on ne veut pas gérer de polygones, mais dépend d'un service externe + matching de noms.
+
+### Voyage hors zone : `city_id` → NULL (assumé pour le MVP)
+Ouvrir Explore capture la position (localisation **live**). Hors des 50 km d'une ville seedée,
+`set_my_location` met `city_id = NULL` → l'utilisateur n'est plus découvrable et voit « hors zone ».
+**C'est voulu** : « live » = *je suis dans cette ville maintenant* ; ailleurs, on n'apparaît pas à
+Khon Kaen. Ça **s'auto-répare** au retour (re-capture) et le routing dépend du **pseudo**, pas de ce
+flag. Évolution premium = parcourir une **autre ville** sans y être (cf. nearest-center ci-dessus).
 
 ---
 

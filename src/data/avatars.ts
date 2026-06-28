@@ -59,3 +59,22 @@ export async function signedAvatarUrl(path: string): Promise<string> {
   });
   return data.signedUrl;
 }
+
+// Pré-charge en UNE requête les URLs signées de plusieurs avatars (listes : Browse…)
+// et remplit le MÊME cache que signedAvatarUrl. Le composant Avatar lit ensuite le
+// cache en synchrone (peek) -> pas de flash, pas de N requêtes réseau. On ne signe
+// que les paths absents du cache, et un avatar isolé en erreur n'empêche pas le reste.
+export async function warmSignedAvatarUrls(paths: string[]): Promise<void> {
+  const missing = [...new Set(paths)].filter((p) => !peekSignedAvatarUrl(p));
+  if (missing.length === 0) return;
+  const { data, error } = await supabase.storage
+    .from(BUCKET)
+    .createSignedUrls(missing, SIGNED_TTL_SECONDS);
+  if (error) throw error;
+  const expiresAt = Date.now() + SIGNED_TTL_SECONDS * 1000;
+  for (const row of data) {
+    if (row.signedUrl && row.path) {
+      signedUrlCache.set(row.path, { url: row.signedUrl, expiresAt });
+    }
+  }
+}

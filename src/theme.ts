@@ -16,6 +16,7 @@ export const colors = {
   // Fonds / remplissages
   surface: "#fff", // fond des écrans / champs
   fill: "#eceef2", // pills/chips non sélectionnés (gris clair)
+  fillStrong: "#c9ccd2", // chips mises en avant (activités en commun) — gris plus foncé
   fillDark: "#111", // remplissages sombres (boutons, pills sélectionnées)
   fillPlaceholder: "#e3e3e6", // fond avatar sans image
   // Bordures / séparateurs
