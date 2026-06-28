@@ -1,7 +1,9 @@
+import type { CountryCode } from "libphonenumber-js";
+
 // Données pays pour le sélecteur d'indicatif.
 // Liste large mais volontairement non exhaustive — extensible au besoin.
 // `code` = ISO 3166-1 alpha-2, `dial` = indicatif international (sans +).
-export type Country = { name: string; code: string; dial: string };
+export type Country = { name: string; code: CountryCode; dial: string };
 
 export const COUNTRIES: Country[] = [
   { name: "France", code: "FR", dial: "33" },

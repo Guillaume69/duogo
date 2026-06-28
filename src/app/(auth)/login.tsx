@@ -2,7 +2,7 @@ import { flagEmoji } from "@/lib/countries";
 import { useCountry } from "@/lib/country";
 import { supabase } from "@/lib/supabase";
 import { router } from "expo-router";
-import { parsePhoneNumberFromString, type CountryCode } from "libphonenumber-js";
+import { parsePhoneNumberFromString } from "libphonenumber-js";
 import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -23,7 +23,7 @@ export default function Login() {
   const [error, setError] = useState<string | null>(null);
 
   const parsed = useMemo(
-    () => parsePhoneNumberFromString(input, country.code as CountryCode),
+    () => parsePhoneNumberFromString(input, country.code),
     [input, country.code],
   );
   const isValid = parsed?.isValid() ?? false;
