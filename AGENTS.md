@@ -53,7 +53,15 @@ gardés par l'état d'auth :
 **dans la base** : contraintes + **RLS** + **RPC `SECURITY DEFINER`** pour les transitions
 sensibles (jamais d'`UPDATE` RLS exposé) ; + validation client pour l'UX seulement. Le **seul**
 bout serveur prévu pour le MVP = une **Edge Function** (push). Client dans `src/lib/supabase.ts`
-(AsyncStorage, `autoRefreshToken` lié à `AppState`).
+(AsyncStorage, `autoRefreshToken` lié à `AppState`). ⚠️ Accès à une table = **deux couches** :
+`GRANT` de table **ET** policy RLS (cf. migration `…_api_role_grants`).
+
+**Couche d'accès aux données (`src/data/`).** Les requêtes Supabase ne vivent **jamais** dans un
+écran ni en dur dans un Provider : chaque domaine a un module `src/data/<domaine>.ts` (ex.
+`src/data/profiles.ts`) de **fonctions pures** (sans React), typées via les types générés (zéro
+`as`), qui **lèvent en cas d'échec** et renvoient la donnée directement. Les Providers/hooks les
+appellent et ne gèrent que l'**état React** (ils n'importent pas `supabase`). Les écrans ne
+connaissent ni `supabase` ni les tables — ils passent par le hook (ex. `useProfile()`).
 
 **Auth/session.** `src/lib/auth.tsx` : `AuthProvider` s'abonne à `getSession()` +
 `onAuthStateChange`, expose `{ session, loading }` via `useAuth()`. C'est le pivot du routing.
@@ -61,6 +69,34 @@ bout serveur prévu pour le MVP = une **Edge Function** (push). Client dans `src
 **Pattern Context.** Chaque état transverse = un `Provider` + un hook `useX()` qui **throw hors
 de son provider** (modèles : `src/lib/country.tsx`, `src/lib/auth.tsx`). À répliquer pour les
 futurs `ProfileProvider` / `LocationProvider` / `FilterProvider`.
+
+## Où placer la logique (RLS-first, 4 étages)
+
+Archi **Supabase-native** : RLS **d'abord**, on monte d'un étage **seulement** quand celui du
+dessous ne suffit pas. Les étages **coexistent** (additif) — ajouter un étage ne fait jamais
+« sortir » de RLS ; le modèle de données posé reste valide même si un backend arrive plus tard.
+
+| Besoin | Étage |
+|---|---|
+| L'utilisateur agit sur **ses** données, règles simples | **Client → PostgREST + RLS** (~80 % de l'app) |
+| Atomique / multi-lignes / machine à états / lit des données que l'appelant ne voit pas | **RPC** `security definer` (via PostgREST) |
+| Secrets, **API externes**, déclenché par event/webhook, planifié | **Edge Function** (Deno) |
+| Compute lourd/long, stateful, service séparé | **Backend dédié** — **hors MVP** |
+
+- **Règle d'or : chaque règle métier a UN seul propriétaire.** Invariants de données → la base
+  (contraintes / RLS / RPC / triggers). Intégration externe → Edge Function. Confort UX → client
+  (validation cosmétique, doublon **assumé** de la base). Ne **jamais** dupliquer une règle de
+  sécurité entre deux étages, ni faire en plusieurs calls client ce qui doit être **une RPC atomique**.
+- **Contrôle d'accès, du plus large au plus fin** : GRANT de **table** (le rôle touche-t-il la
+  table ?) → GRANT de **colonne** (quelles colonnes écrire/lire — l'outil pour « champ non
+  modifiable ») → RLS **`USING`** (quelles lignes) → RLS **`WITH CHECK`** (quelles valeurs) →
+  **trigger** (règles OLD vs NEW : immuable, dérivé) → **RPC** (opération sensible encapsulée).
+  ⚠️ La RLS filtre des **lignes**, pas des colonnes. La base est la **frontière de confiance** ;
+  le client est non fiable, donc tout invariant se défend **dans la base**.
+- **Un backend dédié n'est justifié que** si : matching ML/scoring lourd, modération/anti-fraude
+  temps réel, analytics massives, Realtime+RLS qui plafonne, ou limites/cold-starts Edge gênants
+  sur un chemin critique. Sinon **non**. Il s'ajoute **devant** Supabase (service_role pour ses
+  écritures), sans retirer la RLS existante.
 
 ## Règles dures (non négociables)
 

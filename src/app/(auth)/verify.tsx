@@ -22,6 +22,7 @@ export default function Verify() {
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
+  const [resendError, setResendError] = useState(false);
   const [cooldown, setCooldown] = useState(RESEND_COOLDOWN);
 
   // Décompte pour le bouton « Renvoyer ».
@@ -35,6 +36,7 @@ export default function Verify() {
     const digits = text.replace(/[^0-9]/g, "").slice(0, CODE_LENGTH);
     setCode(digits);
     setError(false);
+    setResendError(false);
     if (digits.length === CODE_LENGTH) {
       verify(digits);
     }
@@ -60,11 +62,19 @@ export default function Verify() {
 
   async function resend() {
     if (cooldown > 0 || !phone) return;
+    // Désactive le bouton TOUT DE SUITE (optimiste) : sinon un double-tap pendant
+    // que la requête est en vol enverrait deux SMS.
+    setCooldown(RESEND_COOLDOWN);
     setError(false);
+    setResendError(false);
     setCode("");
     const { error } = await supabase.auth.signInWithOtp({ phone });
-    setCooldown(RESEND_COOLDOWN);
-    if (error) setError(true);
+    if (error) {
+      // Échec : on rouvre la possibilité de réessayer et on le signale
+      // distinctement de « Wrong code ».
+      setCooldown(0);
+      setResendError(true);
+    }
   }
 
   const prettyPhone = phone
@@ -112,6 +122,9 @@ export default function Verify() {
       </Pressable>
 
       {error && <Text style={styles.errorText}>Wrong code</Text>}
+      {resendError && (
+        <Text style={styles.errorText}>Couldn't resend code</Text>
+      )}
       {loading && <ActivityIndicator style={styles.loader} />}
 
       <View style={styles.resendRow}>

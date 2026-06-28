@@ -32,19 +32,20 @@ On teste en dev avec le **numéro de test** `0600000000` → code `123456` (Twil
 - [x] `npx supabase db push` (migration appliquée au projet distant — le warning pg-delta est cosmétique)
 - [x] Script `db:types` ajouté à `package.json`
 - [x] Généré `src/lib/database.types.ts` (4 enums présents) + client en `createClient<Database>`
-- [ ] **(toi) Rebuild natif** (`source ~/android-build/env.sh && npx expo run:android`) pour embarquer les nouveaux modules
+- [x] **Rebuild natif** (`BUILD SUCCESSFUL in 21s`, APK installé + ouvert sur le Pixel) — modules natifs embarqués
 - [x] Migrer les écrans d'auth existants **FR → EN** (`login`/`verify`/`country`/home)
-- **✅ Acceptation** : l'app rebuild et démarre ; `supabase.from('profiles')` est typé (zéro `as`).
+- **✅ Acceptation OK** : l'app rebuild et démarre ; le client Supabase est typé `<Database>` (zéro `as`, `tsc` vert). _Commit `afe6fab`. Hors-scope brique 0 : `eas init` (reporté brique 8)._
 
 ## Brique 1 — Shell (onglets natifs) + profils + onboarding + Account
 *But : la coquille de l'app connectée + l'identité minimale.*
-- [ ] Table `profiles` (squelette) + trigger `handle_new_user` (création auto) + RLS
-- [ ] `(tabs)/_layout` avec **NativeTabs** (Explore / Inbox / Account, icônes `expo-symbols`)
-- [ ] `ProfileProvider` / `useProfile` (modèle `src/lib/country.tsx`)
-- [ ] Guard **onboarding** dans `(app)/_layout` (redirige si pas de pseudo)
-- [ ] Écran onboarding « choisis ton pseudo »
-- [ ] Onglet **Account** (vue profil en lecture)
-- **✅ Acceptation** : sans pseudo → onboarding → après pseudo, redirection auto vers les onglets ; bascule d'onglets native ; Account affiche le profil.
+- [x] Table `profiles` (squelette) + trigger `handle_new_user` (création auto) + RLS *(migration `20260628120000`)*
+- [x] **Correctif GRANT** : rôles API n'avaient pas les droits DML → migration `20260628140000` (+ default privileges). Voir piège mémoire.
+- [x] `(tabs)/_layout` avec **NativeTabs** (Explore / Inbox / Account, `sf`/`md` icons) — API v56 vérifiée sur les docs
+- [x] `ProfileProvider` / `useProfile` (`src/lib/profile.tsx`, modèle `country.tsx`) — distingue « pas de profil » de « échec de chargement »
+- [x] Guard **onboarding** dans `(app)/_layout` (+ `ProfileGate` loading/erreur)
+- [x] Écran onboarding « choose a username » (validation points de code)
+- [x] Onglet **Account** (pseudo + numéro, Sign out)
+- **✅ Acceptation OK** : onboarding → pseudo → onglets **testé sur le device**. Revue adversariale complète (briques 0+1) passée ; 9 findings corrigés (`countries.ts` EN, robustesse `auth`/`account`/`verify`). Migrations `…120000`/`…140000`/`…150000` **appliquées au distant** (durcissement CHECK `display_name` inclus). Commité.
 
 ## Brique 2 — Profil complet + géoloc + cities + activités
 *But : un profil riche, géolocalisé, avec centres d'intérêt et photo.*

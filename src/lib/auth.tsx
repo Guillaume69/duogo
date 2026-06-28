@@ -26,10 +26,13 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   useEffect(() => {
     // Session courante au démarrage (restaurée depuis AsyncStorage).
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setLoading(false);
-    });
+    // `finally` garantit qu'on sort du splash même si la lecture échoue (sinon
+    // `loading` resterait true et l'app serait bloquée sur le splash à vie).
+    supabase.auth
+      .getSession()
+      .then(({ data }) => setSession(data.session))
+      .catch(() => setSession(null))
+      .finally(() => setLoading(false));
 
     // Mises à jour : login, logout, refresh de token.
     const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
