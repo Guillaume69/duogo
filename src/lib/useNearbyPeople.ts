@@ -4,7 +4,7 @@ import { findNearbyPeople, type NearbyPerson } from "@/data/people";
 import { useFilters } from "@/lib/filters";
 import { useLocation, type CaptureResult } from "@/lib/location";
 import { useProfile } from "@/lib/profile";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 // Orchestration de l'onglet Explore→People : capture la position UNE fois au montage
 // (auto, sans jamais exposer de coordonnées), puis (re)charge la liste à chaque
@@ -80,31 +80,40 @@ export function useNearbyPeople() {
     return { status: "ready", people: list, myActivityIds: new Set(mine) };
   }, [filters, userId]);
 
-  // (Re)charge la liste dès que la position est prête OU que les filtres changent.
-  // On ne repasse PAS par "loading" ici (la liste se remplace en place, sans flash).
-  useEffect(() => {
-    if (locStatus !== "ready") return;
-    let cancelled = false;
-    (async () => {
-      const r = await loadPeople();
-      if (cancelled) return;
-      setPeople(r.people);
-      setMyActivityIds(r.myActivityIds);
-      setPeopleStatus(r.status);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [locStatus, loadPeople]);
-
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true);
+  // Compteur de séquence : seul le chargement le PLUS RÉCEMMENT démarré applique son
+  // résultat. Évite qu'un load périmé en vol (filtres changés, refresh + reload
+  // concomitants) écrase une liste plus fraîche. Tous les chemins passent par runLoad.
+  const reqIdRef = useRef(0);
+  const runLoad = useCallback(async () => {
+    const ticket = ++reqIdRef.current;
     const r = await loadPeople();
+    if (reqIdRef.current !== ticket) return; // résultat périmé -> ignoré
     setPeople(r.people);
     setMyActivityIds(r.myActivityIds);
     setPeopleStatus(r.status);
-    setRefreshing(false);
   }, [loadPeople]);
+
+  // (Re)charge la liste dès que la position est prête OU que les filtres changent.
+  // On ne repasse PAS par "loading" ici (la liste se remplace en place, sans flash) ;
+  // le compteur de séquence invalide déjà tout chargement précédent encore en vol.
+  useEffect(() => {
+    if (locStatus !== "ready") return;
+    void runLoad();
+  }, [locStatus, runLoad]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await runLoad();
+    setRefreshing(false);
+  }, [runLoad]);
+
+  // Rechargement SILENCIEUX (sans spinner ni pull) : utilisé au retour sur l'onglet
+  // Explore (focus) pour rafraîchir le badge « Invited » après l'envoi d'une invitation.
+  // No-op tant que la position n'est pas prête (rien à recharger).
+  const reloadPeople = useCallback(async () => {
+    if (locStatus !== "ready") return;
+    await runLoad();
+  }, [locStatus, runLoad]);
 
   // Réessai depuis denied/error/outside : on re-tente la capture de position.
   const onRetryLocation = useCallback(async () => {
@@ -120,6 +129,7 @@ export function useNearbyPeople() {
     peopleStatus,
     refreshing,
     onRefresh,
+    reloadPeople,
     onRetryLocation,
   };
 }

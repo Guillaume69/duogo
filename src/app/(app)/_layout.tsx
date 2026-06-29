@@ -54,6 +54,16 @@ function AppNavigator() {
             title: "Filter by",
           }}
         />
+        {/* Composition d'une invitation, en modale (poussée depuis la fiche personne).
+            Le titre est fixé par l'écran (« Invite <prénom> »). */}
+        <Stack.Screen
+          name="invite/[id]"
+          options={{
+            presentation: "modal",
+            headerShown: true,
+            title: "New invitation",
+          }}
+        />
       </Stack.Protected>
     </Stack>
   );

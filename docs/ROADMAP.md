@@ -75,13 +75,15 @@ On teste en dev avec le **numéro de test** `0600000000` → code `123456` (Twil
 - [x] Fiche `person/[id]` (avatar, méta, About + Read More, Interests, bouton « Invite to Activity » inactif jusqu'à la brique 4) via RPC `get_person`
 - **✅ Acceptation** : liste des gens proches ; le filtre change les résultats ; tap → fiche. **Testé sur device.**
 
-## Brique 4 — Envoi d'invitation
+## Brique 4 — Envoi d'invitation ✅
 *But : inviter quelqu'un à une activité.*
-- [ ] Table `locations` (seed) + RPC `find_nearby_locations`
-- [ ] Table `invitations` + RLS + RPC `send_invitation` + index anti-spam (1 invitation active/couple)
-- [ ] Flux modal **Invite to Activity** (`InviteDraftProvider` : activité, date/heure native, créneau Matin/Après-midi/Soir ou heure précise, lieu optionnel, message)
-- [ ] Badge « Invited » reflété dans les listes
-- **✅ Acceptation** : invitation composée et créée en base ; bouton Send géré ; « Invited » visible.
+- [x] Table `locations` (seed Khon Kaen, 8 lieux) + RPC `find_nearby_locations` (intra-ville, distance exacte — lieux publics, jamais de geog au client).
+- [x] Table `invitations` + RLS (SELECT membres seulement ; écriture **uniquement** via RPC) + RPC `send_invitation` (`security definer`, valide visibilité destinataire/activité/lieu/date+heure) + **index anti-spam** unique partiel sur la paire **non ordonnée** `(least, greatest)` where pending (1 invitation active entre deux personnes, peu importe le sens).
+- [x] Flux modal **Invite to Activity** (`InviteDraftProvider` + `useInviteDraft` : activité [sheet natif], date [date picker natif, min = aujourd'hui], créneau Morning/Afternoon/Evening **ou** heure précise [time picker natif] exclusifs, lieu optionnel [sheet natif], message).
+- [x] `already_invited` ajouté à `find_nearby_people`/`get_person` → badge « **Invited** » dans la liste Explore + état « Invited » (désactivé) sur la fiche.
+- **✅ Acceptation OK** : **testé sur device** (flux complet : Explore → fiche → modale → activité/date/créneau → Send → invitation créée en base → « Invited » sur la fiche ET dans la liste). `tsc`/`lint` verts.
+- **Revue adversariale** (ultracode, 6 dimensions × find→verify, 12 findings confirmés, tous **low**) : 9 corrigés — durcissement GRANT `locations`, validation **heure passée** le jour même (`send_invitation`), mapping erreur date/heure passée (22023), type `address` nullable honnête, déduplication `firstName`, anti double-fetch Explore (signal one-shot `invite-events`), garde de séquence anti-écrasement périmé (`useNearbyPeople`), état vide du `PickerField`, commentaire d'index GiST corrigé.
+- **Différé (documenté)** : (a) sens **entrant** « on m'a invité » (bouton actif, échec propre via anti-spam) → vrai état dédié en **brique 5** ; (b) fermeture du date/time picker **iOS** inline → passe iOS ; (c) micro-magic-numbers alignés sur les composants existants (GenderField/edit-profile) — non corrigés par cohérence.
 
 ## Brique 5 — Inbox + réponse + match
 *But : recevoir et répondre aux invitations ; créer le match.*

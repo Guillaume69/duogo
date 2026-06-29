@@ -3,13 +3,18 @@ import { InterestChips } from "@/components/InterestChips";
 import { fetchMyActivityIds } from "@/data/activities";
 import { fetchPerson, type Person } from "@/data/people";
 import { useLocation } from "@/lib/location";
-import { formatPersonMeta } from "@/lib/person-format";
+import { firstName, formatPersonMeta } from "@/lib/person-format";
 import { useProfile } from "@/lib/profile";
 import { colors, fontSize, radius, space } from "@/theme";
 import LocationIcon from "@expo/material-symbols/location_on.xml";
 import { Host, Icon } from "@expo/ui";
-import { Stack, useLocalSearchParams } from "expo-router";
-import { useEffect, useState } from "react";
+import {
+  Stack,
+  useFocusEffect,
+  useLocalSearchParams,
+  useRouter,
+} from "expo-router";
+import { useCallback, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -32,6 +37,7 @@ export default function PersonScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { city } = useLocation();
   const { profile } = useProfile();
+  const router = useRouter();
   const userId = profile?.id ?? null;
 
   const [status, setStatus] = useState<Status>("loading");
@@ -42,39 +48,67 @@ export default function PersonScreen() {
   const [bioExpanded, setBioExpanded] = useState(false);
   // Nombre de lignes réelles de la bio (mesuré sans clamp) -> décide du « Read More ».
   const [bioLineCount, setBioLineCount] = useState<number | null>(null);
-  const [reloadKey, setReloadKey] = useState(0);
+  // Premier chargement effectué ? On ne montre le spinner plein écran (et les écrans
+  // d'erreur/notfound) qu'au PREMIER passage ; les rechargements au focus (retour de la
+  // modale d'invitation -> already_invited à jour) se font en silence, sans flash.
+  const loadedOnceRef = useRef(false);
 
-  // Chargement. fetchPerson est CRITIQUE (son échec = écran d'erreur) ; fetchMyActivityIds
-  // est SECONDAIRE (sert juste à mettre en avant les intérêts communs) -> un échec ne
-  // doit pas bloquer la fiche, on le neutralise (-> []). setState toujours après await.
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
+  // Chargement. fetchPerson est CRITIQUE (son échec = écran d'erreur AU 1ER CHARGEMENT) ;
+  // fetchMyActivityIds est SECONDAIRE (intérêts communs) -> échec neutralisé (-> []).
+  // `signal.cancelled` ignore un résultat tardif (démontage / refocus). setState après await.
+  const doLoad = useCallback(
+    async (signal: { cancelled: boolean }) => {
       const minePromise = userId
         ? fetchMyActivityIds(userId).catch(() => [])
         : Promise.resolve<string[]>([]);
+      if (!loadedOnceRef.current) setStatus("loading");
       let p: Person | null;
       try {
         p = id ? await fetchPerson(id) : null;
       } catch {
-        if (!cancelled) setStatus("error");
+        // Échec silencieux après un 1er chargement réussi (rafraîchissement au focus).
+        if (!signal.cancelled && !loadedOnceRef.current) setStatus("error");
         return;
       }
       const mine = await minePromise;
-      if (cancelled) return;
+      if (signal.cancelled) return;
       setMyActivityIds(new Set(mine));
-      if (!p) return setStatus("notfound");
+      if (!p) {
+        if (!loadedOnceRef.current) setStatus("notfound");
+        return;
+      }
       setPerson(p);
       setStatus("ready");
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [id, userId, reloadKey]);
+      loadedOnceRef.current = true;
+    },
+    [id, userId],
+  );
 
+  // Rejoué à CHAQUE focus : au retour de la modale d'invitation, la fiche relit
+  // already_invited et le bouton bascule sur « Invited » sans action manuelle.
+  useFocusEffect(
+    useCallback(() => {
+      const signal = { cancelled: false };
+      doLoad(signal);
+      return () => {
+        signal.cancelled = true;
+      };
+    }, [doLoad]),
+  );
+
+  // Retry depuis l'écran d'erreur (1er chargement échoué) : relance un chargement
+  // (loadedOnceRef encore false -> on repasse bien par le spinner plein écran).
   function onRetry() {
-    setStatus("loading");
-    setReloadKey((k) => k + 1);
+    loadedOnceRef.current = false;
+    doLoad({ cancelled: false });
+  }
+
+  function onInvite() {
+    if (!person) return;
+    router.push({
+      pathname: "/invite/[id]",
+      params: { id: person.id, name: person.display_name },
+    });
   }
 
   const canExpandBio =
@@ -129,13 +163,27 @@ export default function PersonScreen() {
             </View>
           </View>
 
-          {/* Action principale — inactive jusqu'à la brique 4 (flux d'invitation). */}
-          <View>
-            <Pressable style={styles.inviteBtn} disabled>
-              <Text style={styles.inviteText}>Invite to Activity</Text>
+          {/* Action principale. « Invited » (désactivé) si j'ai déjà une invitation
+              pending pour cette personne ; sinon ouvre la modale de composition. */}
+          {person.already_invited ? (
+            <View>
+              <View style={[styles.inviteBtn, styles.invitedBtn]}>
+                <Text style={styles.invitedText}>Invited</Text>
+              </View>
+              <Text style={styles.inviteHint}>Invitation pending</Text>
+            </View>
+          ) : (
+            <Pressable
+              style={({ pressed }) => [
+                styles.inviteBtn,
+                styles.inviteBtnActive,
+                pressed && styles.pressed,
+              ]}
+              onPress={onInvite}
+            >
+              <Text style={styles.inviteTextActive}>Invite to Activity</Text>
             </Pressable>
-            <Text style={styles.inviteHint}>Available soon</Text>
-          </View>
+          )}
 
           {person.bio ? (
             <View style={styles.section}>
@@ -186,11 +234,6 @@ export default function PersonScreen() {
   );
 }
 
-// Premier mot du pseudo, pour le titre « About <prénom> » (cf. mock).
-function firstName(displayName: string): string {
-  return displayName.trim().split(" ")[0];
-}
-
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.surface },
   centered: {
@@ -222,11 +265,18 @@ const styles = StyleSheet.create({
   inviteBtn: {
     height: 52,
     borderRadius: radius.field,
-    backgroundColor: colors.fill,
     alignItems: "center",
     justifyContent: "center",
   },
-  inviteText: { fontSize: fontSize.body, fontWeight: "600", color: colors.text },
+  inviteBtnActive: { backgroundColor: colors.fillDark },
+  inviteTextActive: {
+    fontSize: fontSize.body,
+    fontWeight: "600",
+    color: colors.textOnDark,
+  },
+  invitedBtn: { backgroundColor: colors.fill },
+  invitedText: { fontSize: fontSize.body, fontWeight: "600", color: colors.text },
+  pressed: { opacity: 0.85 },
   inviteHint: {
     fontSize: fontSize.hint,
     color: colors.textMuted,

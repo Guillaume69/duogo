@@ -1,4 +1,5 @@
 import { Constants, type Enums } from "@/lib/database.types";
+import { formatLocalDate } from "@/lib/datetime";
 
 // Helpers partagés entre Edit profile et Account pour les champs de profil.
 
@@ -21,11 +22,9 @@ export function parseBirthDate(value: string | null): Date | null {
 }
 
 // Date -> 'YYYY-MM-DD' (format de la colonne `date`), en composantes locales.
+// Délègue au formatteur partagé (source unique, cf. lib/datetime).
 export function formatBirthDate(date: Date): string {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
+  return formatLocalDate(date);
 }
 
 // Âge révolu à partir d'une date de naissance 'YYYY-MM-DD'.

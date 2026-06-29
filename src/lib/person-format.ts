@@ -8,6 +8,11 @@ export function formatDistance(meters: number): string {
   return `~${Math.round(meters / 1000)} km`;
 }
 
+// Premier mot du pseudo, pour les titres « About <prénom> » / « Invite <prénom> ».
+export function firstName(displayName: string): string {
+  return displayName.trim().split(" ")[0];
+}
+
 // Ligne méta « ville · âge · ~distance ». Les parties absentes (ex. ville inconnue)
 // sont omises. Jamais de coordonnées — uniquement la distance grossière.
 export function formatPersonMeta(

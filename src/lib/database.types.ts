@@ -96,6 +96,148 @@ export type Database = {
         }
         Relationships: []
       }
+      invitations: {
+        Row: {
+          activity_id: string
+          created_at: string
+          id: string
+          location_id: string | null
+          message: string | null
+          recipient_id: string
+          scheduled_date: string
+          scheduled_time: string | null
+          sender_id: string
+          status: Database["public"]["Enums"]["invitation_status"]
+          time_slot: Database["public"]["Enums"]["time_slot"] | null
+          updated_at: string
+        }
+        Insert: {
+          activity_id: string
+          created_at?: string
+          id?: string
+          location_id?: string | null
+          message?: string | null
+          recipient_id: string
+          scheduled_date: string
+          scheduled_time?: string | null
+          sender_id: string
+          status?: Database["public"]["Enums"]["invitation_status"]
+          time_slot?: Database["public"]["Enums"]["time_slot"] | null
+          updated_at?: string
+        }
+        Update: {
+          activity_id?: string
+          created_at?: string
+          id?: string
+          location_id?: string | null
+          message?: string | null
+          recipient_id?: string
+          scheduled_date?: string
+          scheduled_time?: string | null
+          sender_id?: string
+          status?: Database["public"]["Enums"]["invitation_status"]
+          time_slot?: Database["public"]["Enums"]["time_slot"] | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invitations_activity_id_fkey"
+            columns: ["activity_id"]
+            isOneToOne: false
+            referencedRelation: "activities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invitations_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invitations_recipient_id_fkey"
+            columns: ["recipient_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invitations_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      location_activities: {
+        Row: {
+          activity_id: string
+          location_id: string
+        }
+        Insert: {
+          activity_id: string
+          location_id: string
+        }
+        Update: {
+          activity_id?: string
+          location_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "location_activities_activity_id_fkey"
+            columns: ["activity_id"]
+            isOneToOne: false
+            referencedRelation: "activities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "location_activities_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      locations: {
+        Row: {
+          address: string | null
+          city_id: string
+          created_at: string
+          geog: unknown
+          id: string
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          address?: string | null
+          city_id: string
+          created_at?: string
+          geog: unknown
+          id?: string
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          address?: string | null
+          city_id?: string
+          created_at?: string
+          geog?: unknown
+          id?: string
+          name?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "locations_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profile_activities: {
         Row: {
           activity_id: string
@@ -219,6 +361,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      find_nearby_locations: {
+        Args: { p_activity_id: string; p_limit?: number }
+        Returns: {
+          address: string
+          distance_m: number
+          id: string
+          name: string
+        }[]
+      }
       find_nearby_people: {
         Args: {
           p_activity_ids?: string[]
@@ -233,6 +384,7 @@ export type Database = {
           activity_ids: string[]
           activity_names: string[]
           age: number
+          already_invited: boolean
           avatar_path: string
           city_id: string
           display_name: string
@@ -262,6 +414,7 @@ export type Database = {
           activity_ids: string[]
           activity_names: string[]
           age: number
+          already_invited: boolean
           avatar_path: string
           bio: string
           city_id: string
@@ -270,6 +423,18 @@ export type Database = {
           gender: Database["public"]["Enums"]["gender"]
           id: string
         }[]
+      }
+      send_invitation: {
+        Args: {
+          p_activity_id: string
+          p_date: string
+          p_location_id?: string
+          p_message?: string
+          p_recipient_id: string
+          p_time?: string
+          p_time_slot?: Database["public"]["Enums"]["time_slot"]
+        }
+        Returns: string
       }
       set_my_location: {
         Args: { p_lat: number; p_lng: number }

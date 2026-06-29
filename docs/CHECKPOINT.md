@@ -25,6 +25,13 @@ app verrouillée en **mode clair**. UI en **anglais**, commentaires en français
   - UI : Explore (segmented People/Activities, `PersonRow`, intérêts communs en avant), sheet **Filter By** (distance/genre/âge multi/activités), fiche `person/[id]` (About + Read More, Interests, Invite inactif).
   - **Icônes natives** : `@expo/ui` `Icon` + `@expo/material-symbols` (XML) + `metro.config.js` (`assetExts += 'xml'`). Pas de rebuild natif (XML parsé au runtime).
   - Corrections de revue : âge en heure locale (`cities.timezone`), filtre rayon indexé (pré-filtre `ST_DWithin` + frontière snappée), robustesse erreurs client.
+- **4 — Envoi d'invitation** (non commité au moment de ce point) :
+  - Table `locations` (seed 8 lieux Khon Kaen) + RPC `find_nearby_locations` ; table `invitations` + RLS (SELECT membres ; écriture **via RPC uniquement**) + RPC `send_invitation` (`security definer`) + **anti-spam** (index unique partiel `(least, greatest)` where pending → 1 invitation active/couple, tous sens).
+  - `already_invited` ajouté à `find_nearby_people`/`get_person` → badge « **Invited** ».
+  - UI : modale `invite/[id]` (`InviteDraftProvider`/`useInviteDraft`), pickers natifs (activité/lieu = bottom-sheet `@expo/ui` via `PickerField` ; date/heure = `@react-native-community/datetimepicker` via `DatePickerRow`/`InviteTimeField`), bouton « Invite to Activity » actif + état « Invited ».
+  - **Testé sur device** (flux complet jusqu'à création en base + badge). 2 revues adversariales ultracode : round 1 = 12 findings (tous low), 9 corrigés ; round 2 = 1 finding (erreur effacée à l'édition d'un champ), corrigé. Différés : sens entrant → brique 5, fermeture picker iOS, micro-magic-numbers.
+  - **Retours UI** (post-revue) : badge « Invited » redessiné en **pastille accent + ✓** (distinct des chips d'activités) ; **lieux filtrés par activité** (table `location_activities` M-N + `find_nearby_locations(activity_id)`), picker lieu **désactivé tant qu'aucune activité**, et **reset du lieu** au changement d'activité. Testé sur device (Running→4 lieux, Coffee→4 lieux, distincts).
+  - **Migrations 110000→150000 toutes appliquées au distant** (140000 = review fixes ; 150000 = location_activities + filtre par activité). Types régénérés. **Pas encore commité** (à faire sur `main`).
 
 > Toutes les migrations sont **appliquées sur la base distante** ET commitées dans `supabase/migrations/`.
 > Données de dev : profils de test `seed+N@duogo.test` à Khon Kaen ; bios de test sur Ethan/Olivia
@@ -62,12 +69,15 @@ Le **code est sur `main`** (`git pull` suffit) et tout le contexte est dans le r
 
 ---
 
-## ⏭️ Prochaine étape — Brique 4 : Envoi d'invitation
-Table `locations` (seed Khon Kaen) + RPC `find_nearby_locations` ; table `invitations` + RLS +
-RPC `send_invitation` + index unique partiel anti-spam (1 invitation active par couple) ; flux modal
-**Invite to Activity** (`InviteDraftProvider` : activité, date/heure native, créneau ou heure précise,
-lieu optionnel, message) ; badge « Invited » dans les listes. *(Détail dans `docs/ROADMAP.md`.)*
+## ⏭️ Prochaine étape — Brique 5 : Inbox + réponse + match
+RPC `respond_invitation` (accept/decline, verrou `for update`) → crée `conversations` à l'acceptation ;
+RLS `conversations` (membres) ; onglet **Inbox** (segmented Chats | Invitations, reçues/envoyées +
+statuts) ; écran `invitation/[id]` (carte + Accept / Decline). *(Détail dans `docs/ROADMAP.md`.)*
+
+> **Repris de la brique 4** : exposer le sens **entrant** d'une invitation (`invited_by_them` dans
+> `get_person`/`find_nearby_people`) pour afficher « X invited you » au lieu d'un bouton Invite qui
+> échoue ; nettoyer une éventuelle invitation pending croisée à l'acceptation.
 
 ### Dette technique à garder en tête (cf. `docs/ROADMAP.md`)
 - Résolution GPS→ville = **nearest-center 50 km** (pas de polygone) → à revoir **avant la 2ᵉ ville**.
-- Le bouton « Invite to Activity » de la fiche personne est **inactif** (s'active en brique 4).
+- Fermeture du date/time picker **iOS** inline (spinner sans bouton « Done ») — à traiter à la passe iOS (concerne aussi `BirthDateField`).

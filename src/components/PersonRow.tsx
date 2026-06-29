@@ -2,7 +2,7 @@ import { Avatar } from "@/components/Avatar";
 import { InterestChips } from "@/components/InterestChips";
 import type { NearbyPerson } from "@/data/people";
 import { formatPersonMeta } from "@/lib/person-format";
-import { colors, fontSize, space } from "@/theme";
+import { colors, fontSize, radius, space } from "@/theme";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 type Props = {
@@ -29,9 +29,18 @@ export function PersonRow({ person, cityName, myActivityIds, onPress }: Props) {
     >
       <Avatar path={person.avatar_path} size={56} label={person.display_name} />
       <View style={styles.body}>
-        <Text style={styles.name} numberOfLines={1}>
-          {person.display_name}
-        </Text>
+        <View style={styles.nameRow}>
+          <Text style={styles.name} numberOfLines={1}>
+            {person.display_name}
+          </Text>
+          {/* Badge « Invited » = j'ai une invitation pending envoyée à cette personne.
+              Pastille accent : un STATUT, visuellement distinct des chips d'activités grises. */}
+          {person.already_invited && (
+            <View style={styles.invitedBadge}>
+              <Text style={styles.invitedText}>Invited</Text>
+            </View>
+          )}
+        </View>
         <Text style={styles.meta} numberOfLines={1}>
           {formatPersonMeta(cityName, person.age, person.distance_m)}
         </Text>
@@ -61,7 +70,15 @@ const styles = StyleSheet.create({
   },
   pressed: { backgroundColor: colors.fill },
   body: { flex: 1, gap: space.xxs },
-  name: { fontSize: fontSize.body, fontWeight: "600", color: colors.text },
+  nameRow: { flexDirection: "row", alignItems: "center", gap: space.sm },
+  name: { fontSize: fontSize.body, fontWeight: "600", color: colors.text, flexShrink: 1 },
+  invitedBadge: {
+    paddingHorizontal: space.sm,
+    paddingVertical: space.xxs,
+    borderRadius: radius.pill,
+    backgroundColor: colors.accent,
+  },
+  invitedText: { fontSize: fontSize.label, fontWeight: "700", color: colors.textOnDark },
   meta: { fontSize: fontSize.sub, color: colors.textMeta },
   chipsWrap: { marginTop: space.xxs },
 });

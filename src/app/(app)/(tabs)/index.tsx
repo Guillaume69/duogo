@@ -2,11 +2,12 @@ import { FilterButton } from "@/components/FilterButton";
 import { PersonRow } from "@/components/PersonRow";
 import { Segmented } from "@/components/Segmented";
 import { useFilters } from "@/lib/filters";
+import { consumeInvitationSent } from "@/lib/invite-events";
 import { useNearbyPeople } from "@/lib/useNearbyPeople";
 import { colors, fontSize, radius, space } from "@/theme";
 import { FlashList } from "@shopify/flash-list";
-import { useRouter } from "expo-router";
-import { useState, type PropsWithChildren } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useState, type PropsWithChildren } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -33,8 +34,19 @@ export default function ExploreScreen() {
     peopleStatus,
     refreshing,
     onRefresh,
+    reloadPeople,
     onRetryLocation,
   } = useNearbyPeople();
+
+  // Au RETOUR sur Explore, on recharge la liste en silence UNIQUEMENT si une invitation
+  // vient d'être envoyée (signal one-shot) -> rafraîchit le badge « Invited ». Le retour
+  // de la modale Filtre est déjà couvert par l'effet [filters] de useNearbyPeople, donc
+  // on ne recharge pas à chaque focus (évite le double-fetch).
+  useFocusEffect(
+    useCallback(() => {
+      if (consumeInvitationSent()) reloadPeople();
+    }, [reloadPeople]),
+  );
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
