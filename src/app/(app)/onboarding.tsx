@@ -1,4 +1,4 @@
-import { useProfile } from "@/lib/profile";
+import { useProfile } from "@/providers/profile";
 import { colors, fontSize, radius, space } from "@/theme";
 import { useState } from "react";
 import {

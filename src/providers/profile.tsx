@@ -1,5 +1,5 @@
 import { fetchProfile, updateProfile, type Profile } from "@/data/profiles";
-import { useAuth } from "@/lib/auth";
+import { useAuth } from "@/providers/auth";
 import {
   createContext,
   useCallback,

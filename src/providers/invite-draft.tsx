@@ -4,8 +4,8 @@ import {
   sendInvitation,
 } from "@/data/invitations";
 import type { Enums } from "@/lib/database.types";
-import { formatLocalDate, formatLocalTime } from "@/lib/datetime";
-import { markInvitationSent } from "@/lib/invite-events";
+import { formatLocalDate, formatLocalTime } from "@/utils/datetime";
+import { markInvitationSent } from "@/utils/invite-events";
 import {
   createContext,
   useCallback,

@@ -1,7 +1,7 @@
 import { Avatar } from "@/components/Avatar";
 import { InterestChips } from "@/components/InterestChips";
 import type { NearbyPerson } from "@/data/people";
-import { formatPersonMeta } from "@/lib/person-format";
+import { formatPersonMeta } from "@/utils/person-format";
 import { colors, fontSize, radius, space } from "@/theme";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 

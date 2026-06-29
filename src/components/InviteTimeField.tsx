@@ -3,7 +3,7 @@ import {
   formatTimeDisplay,
   TIME_SLOT_LABELS,
   TIME_SLOT_VALUES,
-} from "@/lib/datetime";
+} from "@/utils/datetime";
 import { colors, fontSize, radius, space } from "@/theme";
 import DateTimePicker, {
   DateTimePickerAndroid,

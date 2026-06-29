@@ -3,7 +3,7 @@ import { AvatarPicker } from "@/components/AvatarPicker";
 import { BirthDateField } from "@/components/BirthDateField";
 import { FieldLabel } from "@/components/FieldLabel";
 import { GenderField } from "@/components/GenderField";
-import { useEditProfileForm } from "@/lib/useEditProfileForm";
+import { useEditProfileForm } from "@/hooks/useEditProfileForm";
 import { colors, fontSize, radius, space } from "@/theme";
 import {
   KeyboardAvoidingView,

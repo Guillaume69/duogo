@@ -42,7 +42,7 @@ On teste en dev avec le **numéro de test** `0600000000` → code `123456` (Twil
 - [x] Table `profiles` (squelette) + trigger `handle_new_user` (création auto) + RLS *(migration `20260628120000`)*
 - [x] **Correctif GRANT** : rôles API n'avaient pas les droits DML → migration `20260628140000` (+ default privileges). Voir piège mémoire.
 - [x] `(tabs)/_layout` avec **NativeTabs** (Explore / Inbox / Account, `sf`/`md` icons) — API v56 vérifiée sur les docs
-- [x] `ProfileProvider` / `useProfile` (`src/lib/profile.tsx`, modèle `country.tsx`) — distingue « pas de profil » de « échec de chargement »
+- [x] `ProfileProvider` / `useProfile` (`src/providers/profile.tsx`, modèle `country.tsx`) — distingue « pas de profil » de « échec de chargement »
 - [x] Guard **onboarding** dans `(app)/_layout` (+ `ProfileGate` loading/erreur)
 - [x] Écran onboarding « choose a username » (validation points de code)
 - [x] Onglet **Account** (pseudo + numéro, Sign out)

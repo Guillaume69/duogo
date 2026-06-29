@@ -1,7 +1,7 @@
 import { ProfileLoadError, ProfileLoading } from "@/components/ProfileGate";
-import { FilterProvider } from "@/lib/filters";
-import { LocationProvider } from "@/lib/location";
-import { ProfileProvider, useProfile } from "@/lib/profile";
+import { FilterProvider } from "@/providers/filters";
+import { LocationProvider } from "@/providers/location";
+import { ProfileProvider, useProfile } from "@/providers/profile";
 import { Stack } from "expo-router";
 
 export default function AppLayout() {

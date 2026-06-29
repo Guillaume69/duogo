@@ -1,9 +1,9 @@
 import { FilterButton } from "@/components/FilterButton";
 import { PersonRow } from "@/components/PersonRow";
 import { Segmented } from "@/components/Segmented";
-import { useFilters } from "@/lib/filters";
-import { consumeInvitationSent } from "@/lib/invite-events";
-import { useNearbyPeople } from "@/lib/useNearbyPeople";
+import { useFilters } from "@/providers/filters";
+import { consumeInvitationSent } from "@/utils/invite-events";
+import { useNearbyPeople } from "@/hooks/useNearbyPeople";
 import { colors, fontSize, radius, space } from "@/theme";
 import { FlashList } from "@shopify/flash-list";
 import { useFocusEffect, useRouter } from "expo-router";

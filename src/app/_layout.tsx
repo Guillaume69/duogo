@@ -1,4 +1,4 @@
-import { AuthProvider, useAuth } from "@/lib/auth";
+import { AuthProvider, useAuth } from "@/providers/auth";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import * as SplashScreen from "expo-splash-screen";

@@ -1,4 +1,4 @@
-import { CountryProvider } from "@/lib/country";
+import { CountryProvider } from "@/providers/country";
 import { Stack } from "expo-router";
 
 export default function AuthLayout() {

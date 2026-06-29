@@ -1,5 +1,5 @@
 import { DatePickerRow } from "@/components/DatePickerRow";
-import { formatBirthDate } from "@/lib/profile-fields";
+import { formatBirthDate } from "@/utils/profile-fields";
 
 type Props = {
   value: Date | null;

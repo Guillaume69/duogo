@@ -37,6 +37,14 @@ Router) + **Supabase**. Méthode : **MVP step-by-step**, brique par brique.
 
 ## Architecture (vue d'ensemble)
 
+**Organisation de `src/`** (alias `@/*` → `src/*`, rangé **par nature** de fichier) :
+`app/` écrans + layouts (Expo Router, **seul** dossier de routing) · `providers/` Context + hook
+d'état transverse (`auth`, `profile`, `location`, `filters`, `country`, `invite-draft`) · `hooks/`
+hooks React réutilisables non-provider (`useNearbyPeople`, `useEditProfileForm`) · `data/` couche
+d'accès Supabase, fonctions pures (cf. ci-dessous) · `utils/` helpers purs sans React (`datetime`,
+`countries`, `person-format`, `profile-fields`, `invite-events`) · `components/` UI réutilisable ·
+`lib/` **infra bas niveau uniquement** (`supabase.ts`, `database.types.ts`) · `theme.ts` tokens.
+
 **Routing piloté par la session.** Expo Router, file-based, sous `src/app/` uniquement (écrans +
 layouts). Tout le reste du code vit sous `src/` (alias `@/*` → `src/*`). Deux groupes de routes
 gardés par l'état d'auth :
@@ -63,12 +71,13 @@ bout serveur prévu pour le MVP = une **Edge Function** (push). Client dans `src
 appellent et ne gèrent que l'**état React** (ils n'importent pas `supabase`). Les écrans ne
 connaissent ni `supabase` ni les tables — ils passent par le hook (ex. `useProfile()`).
 
-**Auth/session.** `src/lib/auth.tsx` : `AuthProvider` s'abonne à `getSession()` +
+**Auth/session.** `src/providers/auth.tsx` : `AuthProvider` s'abonne à `getSession()` +
 `onAuthStateChange`, expose `{ session, loading }` via `useAuth()`. C'est le pivot du routing.
 
 **Pattern Context.** Chaque état transverse = un `Provider` + un hook `useX()` qui **throw hors
-de son provider** (modèles : `src/lib/country.tsx`, `src/lib/auth.tsx`). À répliquer pour les
-futurs `ProfileProvider` / `LocationProvider` / `FilterProvider`.
+de son provider** (modèles : `src/providers/country.tsx`, `src/providers/auth.tsx`). Déjà en place
+dans `src/providers/` : `profile`, `location`, `filters`, `invite-draft` ; à répliquer pour les
+prochains états transverses.
 
 ## Où placer la logique (RLS-first, 4 étages)
 

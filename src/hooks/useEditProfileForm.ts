@@ -7,8 +7,8 @@ import {
 import { uploadAvatar } from "@/data/avatars";
 import { updateProfile, type ProfileEdit } from "@/data/profiles";
 import type { Enums } from "@/lib/database.types";
-import { formatBirthDate, parseBirthDate } from "@/lib/profile-fields";
-import { useProfile } from "@/lib/profile";
+import { formatBirthDate, parseBirthDate } from "@/utils/profile-fields";
+import { useProfile } from "@/providers/profile";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";

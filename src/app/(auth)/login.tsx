@@ -1,5 +1,5 @@
-import { flagEmoji } from "@/lib/countries";
-import { useCountry } from "@/lib/country";
+import { flagEmoji } from "@/utils/countries";
+import { useCountry } from "@/providers/country";
 import { supabase } from "@/lib/supabase";
 import { router } from "expo-router";
 import { parsePhoneNumberFromString } from "libphonenumber-js";

@@ -1,9 +1,9 @@
 import { fetchMyActivityIds } from "@/data/activities";
 import { warmSignedAvatarUrls } from "@/data/avatars";
 import { findNearbyPeople, type NearbyPerson } from "@/data/people";
-import { useFilters } from "@/lib/filters";
-import { useLocation, type CaptureResult } from "@/lib/location";
-import { useProfile } from "@/lib/profile";
+import { useFilters } from "@/providers/filters";
+import { useLocation, type CaptureResult } from "@/providers/location";
+import { useProfile } from "@/providers/profile";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 // Orchestration de l'onglet Explore→People : capture la position UNE fois au montage

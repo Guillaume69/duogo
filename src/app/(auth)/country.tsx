@@ -1,5 +1,5 @@
-import { COUNTRIES, flagEmoji, type Country } from "@/lib/countries";
-import { useCountry } from "@/lib/country";
+import { COUNTRIES, flagEmoji, type Country } from "@/utils/countries";
+import { useCountry } from "@/providers/country";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import {

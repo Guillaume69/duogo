@@ -1,4 +1,4 @@
-import { Country, DEFAULT_COUNTRY, findCountry } from "@/lib/countries";
+import { Country, DEFAULT_COUNTRY, findCountry } from "@/utils/countries";
 import { getLocales } from "expo-localization";
 import {
   createContext,

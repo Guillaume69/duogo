@@ -1,5 +1,5 @@
 import { Constants, type Enums } from "@/lib/database.types";
-import { formatLocalDate } from "@/lib/datetime";
+import { formatLocalDate } from "@/utils/datetime";
 
 // Helpers partagés entre Edit profile et Account pour les champs de profil.
 

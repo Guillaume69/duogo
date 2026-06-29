@@ -1,6 +1,6 @@
 import { fieldStyles } from "@/components/fieldStyles";
 import type { Enums } from "@/lib/database.types";
-import { GENDER_LABELS, GENDER_VALUES } from "@/lib/profile-fields";
+import { GENDER_LABELS, GENDER_VALUES } from "@/utils/profile-fields";
 import { colors, fontSize, space } from "@/theme";
 import { BottomSheet, BottomSheetView } from "@expo/ui/community/bottom-sheet";
 import { useRef, useState } from "react";

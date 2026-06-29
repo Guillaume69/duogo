@@ -4,9 +4,9 @@ import {
   fetchMyActivityIds,
 } from "@/data/activities";
 import { fetchCity } from "@/data/cities";
-import { useAuth } from "@/lib/auth";
-import { computeAge, GENDER_LABELS } from "@/lib/profile-fields";
-import { useProfile } from "@/lib/profile";
+import { useAuth } from "@/providers/auth";
+import { computeAge, GENDER_LABELS } from "@/utils/profile-fields";
+import { useProfile } from "@/providers/profile";
 import { supabase } from "@/lib/supabase";
 import { colors, fontSize, radius, space } from "@/theme";
 import { useRouter } from "expo-router";
