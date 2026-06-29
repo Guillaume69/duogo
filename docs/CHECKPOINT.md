@@ -1,6 +1,6 @@
 # DuoGo — Point d'étape
 
-> Dernière mise à jour : **2026-06-29** · dernier commit : `c58693e`
+> Dernière mise à jour : **2026-06-29** · dernier commit : `8fe55ee`
 
 Doc de reprise : où on en est, comment lancer, ce qui reste. **À lire en début de session.**
 Le « quoi faire ensuite » détaillé vit dans [`docs/ROADMAP.md`](./ROADMAP.md) (8 briques, cases
@@ -15,7 +15,7 @@ app verrouillée en **mode clair**. UI en **anglais**, commentaires en français
 
 ---
 
-## Où on en est (briques 0 → 3 DONE, poussées, testées sur device)
+## Où on en est (briques 0 → 4 DONE, poussées, testées sur device)
 - **0 — Fondations** (`afe6fab`) : libs natives, CLI Supabase + migrations versionnées, types générés `createClient<Database>`.
 - **1 — Shell + profils + onboarding** (`019dd66`) : NativeTabs (Explore/Inbox/Account), `profiles` + trigger + RLS, `ProfileProvider`, onboarding pseudo, Account.
 - **2 — Profil complet + géoloc + cities + activités** (`1aed5db`) : avatar Storage, bio/genre/naissance/intérêts, `cities` (seed **Khon Kaen, TH**) + `activities`, `set_my_location` (dérive `city_id`, ne sort jamais les coords).
@@ -25,16 +25,20 @@ app verrouillée en **mode clair**. UI en **anglais**, commentaires en français
   - UI : Explore (segmented People/Activities, `PersonRow`, intérêts communs en avant), sheet **Filter By** (distance/genre/âge multi/activités), fiche `person/[id]` (About + Read More, Interests, Invite inactif).
   - **Icônes natives** : `@expo/ui` `Icon` + `@expo/material-symbols` (XML) + `metro.config.js` (`assetExts += 'xml'`). Pas de rebuild natif (XML parsé au runtime).
   - Corrections de revue : âge en heure locale (`cities.timezone`), filtre rayon indexé (pré-filtre `ST_DWithin` + frontière snappée), robustesse erreurs client.
-- **4 — Envoi d'invitation** (non commité au moment de ce point) :
+- **4 — Envoi d'invitation** (`28323a7`) :
   - Table `locations` (seed 8 lieux Khon Kaen) + RPC `find_nearby_locations` ; table `invitations` + RLS (SELECT membres ; écriture **via RPC uniquement**) + RPC `send_invitation` (`security definer`) + **anti-spam** (index unique partiel `(least, greatest)` where pending → 1 invitation active/couple, tous sens).
   - `already_invited` ajouté à `find_nearby_people`/`get_person` → badge « **Invited** ».
   - UI : modale `invite/[id]` (`InviteDraftProvider`/`useInviteDraft`), pickers natifs (activité/lieu = bottom-sheet `@expo/ui` via `PickerField` ; date/heure = `@react-native-community/datetimepicker` via `DatePickerRow`/`InviteTimeField`), bouton « Invite to Activity » actif + état « Invited ».
   - **Testé sur device** (flux complet jusqu'à création en base + badge). 2 revues adversariales ultracode : round 1 = 12 findings (tous low), 9 corrigés ; round 2 = 1 finding (erreur effacée à l'édition d'un champ), corrigé. Différés : sens entrant → brique 5, fermeture picker iOS, micro-magic-numbers.
   - **Retours UI** (post-revue) : badge « Invited » redessiné en **pastille accent + ✓** (distinct des chips d'activités) ; **lieux filtrés par activité** (table `location_activities` M-N + `find_nearby_locations(activity_id)`), picker lieu **désactivé tant qu'aucune activité**, et **reset du lieu** au changement d'activité. Testé sur device (Running→4 lieux, Coffee→4 lieux, distincts).
-  - **Migrations 110000→150000 toutes appliquées au distant** (140000 = review fixes ; 150000 = location_activities + filtre par activité). Types régénérés. **Pas encore commité** (à faire sur `main`).
+  - **Migrations 110000→160000 appliquées au distant** (140000 = review fixes ; 150000 = location_activities + filtre par activité ; 160000 = seed DEV Phu Pha Man). Types régénérés. **Commité** (`28323a7` feature, `3381ff4` seed DEV).
+
+> **Reorg `src/`** (`8fe55ee`) : `lib/` ne garde que l'infra (`supabase.ts`, `database.types.ts`) ;
+> le reste est rangé par nature → `providers/` · `hooks/` · `utils/` (cf. `AGENTS.md`).
 
 > Toutes les migrations sont **appliquées sur la base distante** ET commitées dans `supabase/migrations/`.
-> Données de dev : profils de test `seed+N@duogo.test` à Khon Kaen ; bios de test sur Ethan/Olivia
+> Données de dev : profils de test `seed+N@duogo.test` déplacés à **Phu Pha Man** (seed 160000, pour
+> tester avec le vrai GPS) ; bios de test sur Ethan/Olivia
 > (réversibles : `update profiles set bio = null where display_name in ('Ethan','Olivia')`).
 
 ---
