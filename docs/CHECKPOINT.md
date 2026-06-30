@@ -1,6 +1,6 @@
 # DuoGo — Point d'étape
 
-> Dernière mise à jour : **2026-06-29** · dernier commit : `8fe55ee`
+> Dernière mise à jour : **2026-06-30** · dernier commit : `34ce913`
 
 Doc de reprise : où on en est, comment lancer, ce qui reste. **À lire en début de session.**
 Le « quoi faire ensuite » détaillé vit dans [`docs/ROADMAP.md`](./ROADMAP.md) (8 briques, cases
@@ -15,7 +15,7 @@ app verrouillée en **mode clair**. UI en **anglais**, commentaires en français
 
 ---
 
-## Où on en est (briques 0 → 4 DONE, poussées, testées sur device)
+## Où on en est (briques 0 → 5 DONE, poussées, testées sur device)
 - **0 — Fondations** (`afe6fab`) : libs natives, CLI Supabase + migrations versionnées, types générés `createClient<Database>`.
 - **1 — Shell + profils + onboarding** (`019dd66`) : NativeTabs (Explore/Inbox/Account), `profiles` + trigger + RLS, `ProfileProvider`, onboarding pseudo, Account.
 - **2 — Profil complet + géoloc + cities + activités** (`1aed5db`) : avatar Storage, bio/genre/naissance/intérêts, `cities` (seed **Khon Kaen, TH**) + `activities`, `set_my_location` (dérive `city_id`, ne sort jamais les coords).
@@ -32,6 +32,11 @@ app verrouillée en **mode clair**. UI en **anglais**, commentaires en français
   - **Testé sur device** (flux complet jusqu'à création en base + badge). 2 revues adversariales ultracode : round 1 = 12 findings (tous low), 9 corrigés ; round 2 = 1 finding (erreur effacée à l'édition d'un champ), corrigé. Différés : sens entrant → brique 5, fermeture picker iOS, micro-magic-numbers.
   - **Retours UI** (post-revue) : badge « Invited » redessiné en **pastille accent + ✓** (distinct des chips d'activités) ; **lieux filtrés par activité** (table `location_activities` M-N + `find_nearby_locations(activity_id)`), picker lieu **désactivé tant qu'aucune activité**, et **reset du lieu** au changement d'activité. Testé sur device (Running→4 lieux, Coffee→4 lieux, distincts).
   - **Migrations 110000→160000 appliquées au distant** (140000 = review fixes ; 150000 = location_activities + filtre par activité ; 160000 = seed DEV Phu Pha Man). Types régénérés. **Commité** (`28323a7` feature, `3381ff4` seed DEV).
+- **5 — Inbox + réponse + match + Modify** (`34ce913`) :
+  - Modèle **« tour de parole »** (`invitations.awaiting_response_from`) ; table **`conversations`** (= le match, `invitation_id` UNIQUE + **paire unique** `user_a<user_b`) + RLS membres ; RPC `respond_invitation` (accept → crée/réutilise la conversation ; decline) / `modify_invitation` (contre-proposition → `changes_requested`, renvoie le tour) ; RPC `get_my_invitations`/`get_invitation` ; flags entrants `invited_by_them`/`active_invitation_id` dans le browse.
+  - UI : onglet **Inbox** (reçues + actionnables, lien *Sent*), `invitation/[id]` (**Accept/Modify/Decline** selon le tour), `modify-invitation/[id]` (formulaire réutilisé via `InviteForm` + `InviteDraftProvider` create|modify). **Modify avancé de la brique 8.**
+  - **Migrations 170000→174000** appliquées au distant + commitées (`34ce913`). Revue adversariale (5 dim. × find→verify, **21 → 12 findings, tous corrigés** ; dont **régression « heure passée le jour même » restaurée** + **conversation unique par paire**). `tsc`/`lint` verts.
+  - Différés (lows) : flash bref du lieu pré-rempli en Modify, garde anti-double-tap sur les *push* de nav, état « matched » sur la fiche personne → brique 6.
 
 > **Reorg `src/`** (`8fe55ee`) : `lib/` ne garde que l'infra (`supabase.ts`, `database.types.ts`) ;
 > le reste est rangé par nature → `providers/` · `hooks/` · `utils/` (cf. `AGENTS.md`).
@@ -73,14 +78,15 @@ Le **code est sur `main`** (`git pull` suffit) et tout le contexte est dans le r
 
 ---
 
-## ⏭️ Prochaine étape — Brique 5 : Inbox + réponse + match
-RPC `respond_invitation` (accept/decline, verrou `for update`) → crée `conversations` à l'acceptation ;
-RLS `conversations` (membres) ; onglet **Inbox** (segmented Chats | Invitations, reçues/envoyées +
-statuts) ; écran `invitation/[id]` (carte + Accept / Decline). *(Détail dans `docs/ROADMAP.md`.)*
+## ⏭️ Prochaine étape — Brique 6 : Chat temps réel
+Table `messages` + RLS + ajout à la publication `supabase_realtime` ; RPC `mark_messages_read` +
+trigger `last_message_at` ; liste **Chats** + écran `chat/[conversationId]` (FlashList inversée,
+carte invitation épinglée, composer, abonnement **Realtime** + cleanup). *(Détail dans `docs/ROADMAP.md`.)*
 
-> **Repris de la brique 4** : exposer le sens **entrant** d'une invitation (`invited_by_them` dans
-> `get_person`/`find_nearby_people`) pour afficher « X invited you » au lieu d'un bouton Invite qui
-> échoue ; nettoyer une éventuelle invitation pending croisée à l'acceptation.
+> **Gratuit une fois le Realtime posé** : étendre l'abonnement à `invitations`/`conversations` →
+> l'Inbox se rafraîchit en direct (aujourd'hui : focus / pull-to-refresh seulement).
+> **Différés brique 5 (lows)** : flash bref du lieu en Modify ; garde anti-double-tap sur les *push*
+> de navigation ; état « matched » sur la fiche personne (dépend du chat).
 
 ### Dette technique à garder en tête (cf. `docs/ROADMAP.md`)
 - Résolution GPS→ville = **nearest-center 50 km** (pas de polygone) → à revoir **avant la 2ᵉ ville**.

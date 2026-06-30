@@ -85,13 +85,16 @@ On teste en dev avec le **numéro de test** `0600000000` → code `123456` (Twil
 - **Revue adversariale** (ultracode, 6 dimensions × find→verify, 12 findings confirmés, tous **low**) : 9 corrigés — durcissement GRANT `locations`, validation **heure passée** le jour même (`send_invitation`), mapping erreur date/heure passée (22023), type `address` nullable honnête, déduplication `firstName`, anti double-fetch Explore (signal one-shot `invite-events`), garde de séquence anti-écrasement périmé (`useNearbyPeople`), état vide du `PickerField`, commentaire d'index GiST corrigé.
 - **Différé (documenté)** : (a) sens **entrant** « on m'a invité » (bouton actif, échec propre via anti-spam) → vrai état dédié en **brique 5** ; (b) fermeture du date/time picker **iOS** inline → passe iOS ; (c) micro-magic-numbers alignés sur les composants existants (GenderField/edit-profile) — non corrigés par cohérence.
 
-## Brique 5 — Inbox + réponse + match
+## Brique 5 — Inbox + réponse + match + Modify ✅
 *But : recevoir et répondre aux invitations ; créer le match.*
-- [ ] RPC `respond_invitation` (accept/decline, verrou `for update`) → crée `conversations` à l'acceptation
-- [ ] RLS `conversations` (membres seulement)
-- [ ] Onglet **Inbox** (segmented Chats | Invitations ; reçues/envoyées + statuts)
-- [ ] Écran `invitation/[id]` (carte + Accept / Decline) *(Modify reporté en brique 8)*
-- **✅ Acceptation** : le destinataire accepte → conversation créée ; decline met à jour le statut ; l'expéditeur voit le changement.
+- [x] Modèle **« tour de parole »** : `invitations.awaiting_response_from` (qui doit répondre ; NULL = terminée) ; anti-spam élargi à `changes_requested` ; `send_invitation` pose le tour initial.
+- [x] RPC `respond_invitation` (accept/decline, `for update`) → **crée/réutilise** `conversations` à l'acceptation. RPC `modify_invitation` (contre-proposition → `changes_requested`, renvoie le tour à l'autre membre).
+- [x] Table `conversations` (= le match) : `invitation_id` UNIQUE + **paire unique** (`user_a<user_b`) + RLS membres ; aucune écriture client.
+- [x] RPC `get_my_invitations` (reçues+envoyées enrichies) + `get_invitation` (détail + distances) ; flags `invited_by_them`/`active_invitation_id` ajoutés à `find_nearby_people`/`get_person` (sens entrant — dette brique 4).
+- [x] Onglet **Inbox** (reçues + actionnables) + lien **Sent** (envoyées + statuts) ; écran `invitation/[id]` (carte + **Accept / Modify / Decline** selon « mon tour ») ; `modify-invitation/[id]` réutilise le formulaire (`InviteForm` + `InviteDraftProvider` create|modify).
+- **✅ Acceptation** : testé avec 2 comptes sur device ; revue adversariale (21 findings → 12 confirmés, tous corrigés) ; `tsc`/`lint` verts.
+- **Décisions** : **Modify avancé** de la brique 8 → brique 5 (demande produit). Pas de temps réel (focus/pull-to-refresh) → live = brique 6, push + badge = brique 8.
+- **Différés (lows documentés)** : flash bref du lieu pré-rempli en Modify ; pas de garde anti-double-tap sur les *push* de navigation ; état « matched » sur la fiche personne → brique 6 (chat).
 
 ## Brique 6 — Chat temps réel *(boucle cœur complète)*
 *But : discuter une fois matché.*
@@ -108,12 +111,12 @@ On teste en dev avec le **numéro de test** `0600000000` → code `123456` (Twil
 - [ ] Écran `all-locations` cherchable
 - **✅ Acceptation** : liste d'activités ; Activity View ; All Locations cherchable.
 
-## Brique 8 — Notifications push + deep links + Modify
-*But : notifier en temps réel et permettre la contre-proposition.*
+## Brique 8 — Notifications push + deep links
+*But : notifier en temps réel.*
 - [ ] Edge Function `send-push` + **Database Webhooks** (invitations insert/update, messages insert) + secrets
-- [ ] Client : permission + token Expo (`projectId`), `setNotificationHandler` (popup foreground), deep-link → `invitation/[id]` ou `chat/[id]`
+- [ ] Client : permission + token Expo (`projectId`, → table `push_tokens`), `setNotificationHandler` (popup foreground), deep-link → `invitation/[id]` ou `chat/[id]`, **badge** sur l'onglet Inbox
 - [ ] Prérequis **FCM** (Android) / **APNs** (iOS) chez EAS
-- [ ] Activer **Modify** (statut `changes_requested` + `proposed_*` + RPC)
+- [x] ~~Activer **Modify**~~ → **fait en brique 5** (modèle « tour de parole » : réécriture en place + `awaiting_response_from`, RPC `modify_invitation` ; pas de colonnes `proposed_*`).
 - **✅ Acceptation** : invitation/message → push ; tap deep-link ouvre le bon écran ; bannière in-app en foreground.
 
 ---
