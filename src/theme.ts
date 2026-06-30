@@ -28,6 +28,9 @@ export const colors = {
   // Accents
   accent: "#208AEF", // liens / accent
   danger: "#e5484d", // erreurs
+  // Statuts d'invitation (badges) — texte blanc sur chacun.
+  success: "#1f8a4c", // accepté (vert)
+  warning: "#9a8f1e", // changements demandés (olive)
 } as const;
 
 export const fontSize = {

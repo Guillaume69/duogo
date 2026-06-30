@@ -64,6 +64,26 @@ function AppNavigator() {
             title: "New invitation",
           }}
         />
+        {/* Détail d'une invitation (poussé depuis l'Inbox) ; titre = nom de l'autre,
+            fixé par l'écran. Accept / Modify / Decline si c'est mon tour. */}
+        <Stack.Screen
+          name="invitation/[id]"
+          options={{ headerShown: true, title: "Invitation" }}
+        />
+        {/* Contre-proposition (Modify), en modale au-dessus du détail. */}
+        <Stack.Screen
+          name="modify-invitation/[id]"
+          options={{
+            presentation: "modal",
+            headerShown: true,
+            title: "Modify invitation",
+          }}
+        />
+        {/* Liste des invitations envoyées (poussée depuis l'Inbox via le lien « Sent »). */}
+        <Stack.Screen
+          name="sent-invitations"
+          options={{ headerShown: true, title: "Invitation Sent" }}
+        />
       </Stack.Protected>
     </Stack>
   );

@@ -1,6 +1,9 @@
 import {
   isDuplicateInvitationError,
+  isInvitationConflictError,
+  isInvitationNotFoundError,
   isPastScheduleInvitationError,
+  modifyInvitation,
   sendInvitation,
 } from "@/data/invitations";
 import type { Enums } from "@/lib/database.types";
@@ -16,13 +19,29 @@ import {
   type PropsWithChildren,
 } from "react";
 
-// Brouillon d'invitation : état du flux modal « Invite to Activity », borné à un
-// destinataire (recipientId). Modèle Provider + hook (cf. country.tsx/auth.tsx) ;
-// monté autour de l'écran de composition uniquement. La logique d'envoi (RPC,
-// formatage date/heure, mapping d'erreur) vit ICI ; l'écran ne fait que câbler.
+// Brouillon d'invitation : état du flux « Invite to Activity » réutilisé en CRÉATION
+// (nouvelle invitation vers un destinataire) ET en MODIFY (contre-proposition sur une
+// invitation existante). Modèle Provider + hook (cf. country.tsx/auth.tsx) ; monté autour
+// du formulaire. La logique d'envoi (RPC, formatage date/heure, mapping d'erreur) vit
+// ICI ; le formulaire (InviteForm) ne fait que câbler.
 //
 // Règle « quand » : la date est requise ; l'heure est soit un CRÉNEAU, soit une heure
 // PRÉCISE, soit rien — jamais les deux (les setters maintiennent l'exclusivité).
+
+// Valeurs initiales du brouillon (pré-remplissage en mode modify).
+export type InviteInitial = {
+  activityId: string | null;
+  date: Date | null;
+  timeSlot: Enums<"time_slot"> | null;
+  time: Date | null;
+  locationId: string | null;
+  message: string;
+};
+
+// Mode du brouillon : création (vers un destinataire) ou modification (d'une invitation).
+export type InviteDraftConfig =
+  | { mode: "create"; recipientId: string }
+  | { mode: "modify"; invitationId: string; initial: InviteInitial };
 
 type InviteDraftValue = {
   activityId: string | null;
@@ -45,22 +64,41 @@ type InviteDraftValue = {
   canSend: boolean;
   sending: boolean;
   error: string | null;
-  /** Envoie l'invitation ; renvoie true au succès (l'écran ferme alors la modale). */
+  /** Envoie/enregistre ; renvoie true au succès (le formulaire ferme alors l'écran). */
   submit: () => Promise<boolean>;
 };
 
 const InviteDraftContext = createContext<InviteDraftValue | null>(null);
 
 export function InviteDraftProvider({
-  recipientId,
+  config,
   children,
-}: PropsWithChildren<{ recipientId: string }>) {
-  const [activityId, setActivityIdState] = useState<string | null>(null);
-  const [date, setDateState] = useState<Date | null>(null);
-  const [timeSlot, setTimeSlot] = useState<Enums<"time_slot"> | null>(null);
-  const [time, setTimeState] = useState<Date | null>(null);
-  const [locationId, setLocationIdState] = useState<string | null>(null);
-  const [message, setMessageState] = useState("");
+}: PropsWithChildren<{ config: InviteDraftConfig }>) {
+  // État initial : vide en création, pré-rempli en modify.
+  const initial: InviteInitial =
+    config.mode === "modify"
+      ? config.initial
+      : {
+          activityId: null,
+          date: null,
+          timeSlot: null,
+          time: null,
+          locationId: null,
+          message: "",
+        };
+
+  const [activityId, setActivityIdState] = useState<string | null>(
+    initial.activityId,
+  );
+  const [date, setDateState] = useState<Date | null>(initial.date);
+  const [timeSlot, setTimeSlot] = useState<Enums<"time_slot"> | null>(
+    initial.timeSlot,
+  );
+  const [time, setTimeState] = useState<Date | null>(initial.time);
+  const [locationId, setLocationIdState] = useState<string | null>(
+    initial.locationId,
+  );
+  const [message, setMessageState] = useState(initial.message);
 
   const [sending, setSending] = useState(false);
   // Garde synchrone anti double-tap (le state `sending` ne se voit qu'au render suivant).
@@ -73,16 +111,19 @@ export function InviteDraftProvider({
     return new Date(t.getFullYear(), t.getMonth(), t.getDate());
   }, []);
 
-  // Toute édition d'un champ efface l'erreur d'envoi affichée : corriger le champ fautif
-  // (ex. choisir une date/heure plus tardive après un rejet « déjà passé ») fait
-  // disparaître le message, plutôt que de le laisser jusqu'au prochain Send.
-  const setActivityId = useCallback((id: string) => {
-    setActivityIdState(id);
-    // Les lieux dépendent de l'activité (lieux filtrés par type) -> changer d'activité
-    // invalide le lieu choisi : on le réinitialise systématiquement.
-    setLocationIdState(null);
-    setError(null);
-  }, []);
+  // Toute édition d'un champ efface l'erreur d'envoi affichée.
+  const setActivityId = useCallback(
+    (id: string) => {
+      // Re-sélectionner la MÊME activité = no-op : ne pas effacer le lieu (sinon, en
+      // mode modify, retaper l'activité pré-remplie perdrait le lieu de l'invitation).
+      if (id === activityId) return;
+      setActivityIdState(id);
+      // Changer d'activité invalide le lieu choisi (lieux filtrés par type) -> reset.
+      setLocationIdState(null);
+      setError(null);
+    },
+    [activityId],
+  );
   const setDate = useCallback((d: Date) => {
     setDateState(d);
     setError(null);
@@ -123,33 +164,52 @@ export function InviteDraftProvider({
     sendingRef.current = true;
     setSending(true);
     setError(null);
+    // Payload commun aux deux modes.
+    const fields = {
+      activityId,
+      date: formatLocalDate(date),
+      timeSlot,
+      time: time ? formatLocalTime(time) : null,
+      locationId,
+      message: message.trim() || null,
+    };
     try {
-      await sendInvitation({
-        recipientId,
-        activityId,
-        date: formatLocalDate(date),
-        timeSlot,
-        time: time ? formatLocalTime(time) : null,
-        locationId,
-        message: message.trim() || null,
-      });
-      // Signal pour qu'Explore rafraîchisse le badge « Invited » à son prochain focus.
+      if (config.mode === "create") {
+        await sendInvitation({ recipientId: config.recipientId, ...fields });
+      } else {
+        await modifyInvitation({ invitationId: config.invitationId, ...fields });
+      }
+      // Signal pour qu'Explore rafraîchisse ses badges au prochain focus.
       markInvitationSent();
       // Succès : on NE remet pas sending à false (l'écran se ferme dans la foulée).
       return true;
     } catch (e) {
-      setError(
-        isDuplicateInvitationError(e)
+      // Mapping par MODE : send_invitation lève aussi P0001 (destinataire indisponible,
+      // activité/lieu inconnus…) -> en création, ne JAMAIS router un P0001 vers le libellé
+      // « modify ». Le conflit/introuvable « modify » (pas mon tour / déjà répondue) est
+      // propre au mode modify.
+      let msg: string;
+      if (isPastScheduleInvitationError(e)) {
+        msg = "That date or time has already passed — please pick a later one.";
+      } else if (config.mode === "create") {
+        msg = isDuplicateInvitationError(e)
           ? "There’s already a pending invitation with this person."
-          : isPastScheduleInvitationError(e)
-            ? "That date or time has already passed — please pick a later one."
-            : "Couldn’t send the invitation. Please try again.",
-      );
+          : isInvitationConflictError(e)
+            ? "This person isn’t available anymore."
+            : "Couldn’t send the invitation. Please try again.";
+      } else {
+        msg = isInvitationNotFoundError(e)
+          ? "This invitation no longer exists."
+          : isInvitationConflictError(e)
+            ? "This invitation can no longer be changed."
+            : "Couldn’t save your changes. Please try again.";
+      }
+      setError(msg);
       sendingRef.current = false;
       setSending(false);
       return false;
     }
-  }, [recipientId, activityId, date, timeSlot, time, locationId, message]);
+  }, [config, activityId, date, timeSlot, time, locationId, message]);
 
   const value: InviteDraftValue = {
     activityId,

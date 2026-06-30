@@ -8,6 +8,13 @@ export function formatDistance(meters: number): string {
   return `~${Math.round(meters / 1000)} km`;
 }
 
+// Distance vers un LIEU PUBLIC (pas une position d'autrui) -> précision fine autorisée
+// (ex. « 290 m away », « ~3 km away »). Sert à la carte d'invitation.
+export function formatPlaceDistance(meters: number): string {
+  if (meters < 1000) return `${meters} m away`;
+  return `~${Math.round(meters / 1000)} km away`;
+}
+
 // Premier mot du pseudo, pour les titres « About <prénom> » / « Invite <prénom> ».
 export function firstName(displayName: string): string {
   return displayName.trim().split(" ")[0];

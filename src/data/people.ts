@@ -10,8 +10,13 @@ export type NearbyPerson =
 
 // Une personne en fiche détail (RPC get_person). Mêmes garanties que find_nearby_people
 // (jamais de coordonnées, distance grossière, âge et non la date) + la `bio`.
-export type Person =
-  Database["public"]["Functions"]["get_person"]["Returns"][number];
+// `active_invitation_id` vient d'un LEFT JOIN LATERAL -> NULL s'il n'y a pas d'invitation
+// active (le générateur le type non-null). On le resserre honnêtement : il pilote la
+// navigation (bouton Respond/Invited), pas seulement l'affichage.
+type RawPerson = Database["public"]["Functions"]["get_person"]["Returns"][number];
+export type Person = Omit<RawPerson, "active_invitation_id"> & {
+  active_invitation_id: string | null;
+};
 
 // Une tranche d'âge sélectionnée. max null = borne haute OUVERTE (« 46+ »).
 export type AgeRange = { min: number; max: number | null };

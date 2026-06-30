@@ -96,9 +96,59 @@ export type Database = {
         }
         Relationships: []
       }
+      conversations: {
+        Row: {
+          created_at: string
+          id: string
+          invitation_id: string
+          updated_at: string
+          user_a: string
+          user_b: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          invitation_id: string
+          updated_at?: string
+          user_a: string
+          user_b: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          invitation_id?: string
+          updated_at?: string
+          user_a?: string
+          user_b?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversations_invitation_id_fkey"
+            columns: ["invitation_id"]
+            isOneToOne: true
+            referencedRelation: "invitations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversations_user_a_fkey"
+            columns: ["user_a"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversations_user_b_fkey"
+            columns: ["user_b"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invitations: {
         Row: {
           activity_id: string
+          awaiting_response_from: string | null
           created_at: string
           id: string
           location_id: string | null
@@ -113,6 +163,7 @@ export type Database = {
         }
         Insert: {
           activity_id: string
+          awaiting_response_from?: string | null
           created_at?: string
           id?: string
           location_id?: string | null
@@ -127,6 +178,7 @@ export type Database = {
         }
         Update: {
           activity_id?: string
+          awaiting_response_from?: string | null
           created_at?: string
           id?: string
           location_id?: string | null
@@ -145,6 +197,13 @@ export type Database = {
             columns: ["activity_id"]
             isOneToOne: false
             referencedRelation: "activities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invitations_awaiting_response_from_fkey"
+            columns: ["awaiting_response_from"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
@@ -391,6 +450,55 @@ export type Database = {
           distance_m: number
           gender: Database["public"]["Enums"]["gender"]
           id: string
+          invited_by_them: boolean
+        }[]
+      }
+      get_invitation: {
+        Args: { p_id: string }
+        Returns: {
+          activity_id: string
+          activity_name: string
+          awaiting_me: boolean
+          created_at: string
+          direction: string
+          id: string
+          location_address: string
+          location_distance_m: number
+          location_id: string
+          location_name: string
+          message: string
+          other_avatar_path: string
+          other_city_name: string
+          other_distance_m: number
+          other_id: string
+          other_name: string
+          scheduled_date: string
+          scheduled_time: string
+          status: Database["public"]["Enums"]["invitation_status"]
+          time_slot: Database["public"]["Enums"]["time_slot"]
+          updated_at: string
+        }[]
+      }
+      get_my_invitations: {
+        Args: never
+        Returns: {
+          activity_id: string
+          activity_name: string
+          awaiting_me: boolean
+          created_at: string
+          direction: string
+          id: string
+          location_id: string
+          location_name: string
+          message: string
+          other_avatar_path: string
+          other_id: string
+          other_name: string
+          scheduled_date: string
+          scheduled_time: string
+          status: Database["public"]["Enums"]["invitation_status"]
+          time_slot: Database["public"]["Enums"]["time_slot"]
+          updated_at: string
         }[]
       }
       get_my_profile: {
@@ -411,6 +519,7 @@ export type Database = {
       get_person: {
         Args: { p_id: string }
         Returns: {
+          active_invitation_id: string
           activity_ids: string[]
           activity_names: string[]
           age: number
@@ -422,7 +531,24 @@ export type Database = {
           distance_m: number
           gender: Database["public"]["Enums"]["gender"]
           id: string
+          invited_by_them: boolean
         }[]
+      }
+      modify_invitation: {
+        Args: {
+          p_activity_id: string
+          p_date: string
+          p_invitation_id: string
+          p_location_id?: string
+          p_message?: string
+          p_time?: string
+          p_time_slot?: Database["public"]["Enums"]["time_slot"]
+        }
+        Returns: string
+      }
+      respond_invitation: {
+        Args: { p_accept: boolean; p_invitation_id: string }
+        Returns: string
       }
       send_invitation: {
         Args: {

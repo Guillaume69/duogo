@@ -5,41 +5,24 @@ import { FlashList } from "@shopify/flash-list";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, type PropsWithChildren } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 
-// Onglet Inbox. Affiche les invitations REÇUES (actionnables) en liste principale, avec
-// un lien « Sent » vers l'écran des envoyées (cf. maquette). Le chat (liste Chats + écran)
-// arrive en brique 6. Tri serveur : mon tour d'abord -> les invitations à traiter en haut.
-export default function InboxScreen() {
+// Écran « Invitation Sent » (poussé depuis l'Inbox). Liste les invitations ENVOYÉES avec
+// leur statut. Tap -> détail (lecture seule tant que c'est à l'autre de répondre ; si
+// l'autre a demandé des changements, c'est redevenu mon tour -> actions disponibles).
+export default function SentInvitationsScreen() {
   const router = useRouter();
   const { status, invitations, refreshing, onRefresh, reload } = useInbox();
 
-  // Recharge à chaque retour sur l'onglet (après avoir répondu/modifié depuis le détail).
   useFocusEffect(
     useCallback(() => {
       void reload();
     }, [reload]),
   );
 
-  // Liste principale = ce qui m'arrive ET ce qui attend mon action : reçues + toute
-  // invitation dont c'est mon tour (ex. une invitation ENVOYÉE que l'autre a renvoyée via
-  // Modify revient à moi -> sinon elle n'apparaîtrait que dans « Sent » et serait ratée).
-  const received = invitations.filter(
-    (i) => i.direction === "incoming" || i.awaiting_me,
-  );
+  const sent = invitations.filter((i) => i.direction === "outgoing");
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
-      <View style={styles.headerRow}>
-        <Text style={styles.header}>Inbox</Text>
-        <Pressable
-          onPress={() => router.push("/sent-invitations")}
-          hitSlop={8}
-        >
-          <Text style={styles.link}>Sent</Text>
-        </Pressable>
-      </View>
-
+    <View style={styles.container}>
       {status === "loading" ? (
         <Centered>
           <ActivityIndicator />
@@ -53,7 +36,7 @@ export default function InboxScreen() {
         </Centered>
       ) : (
         <FlashList
-          data={received}
+          data={sent}
           keyExtractor={(i) => i.id}
           renderItem={({ item }) => (
             <InvitationRow
@@ -66,12 +49,12 @@ export default function InboxScreen() {
           onRefresh={onRefresh}
           ListEmptyComponent={
             <View style={styles.empty}>
-              <Text style={styles.muted}>No invitations yet.</Text>
+              <Text style={styles.muted}>You haven’t sent any invitations yet.</Text>
             </View>
           }
         />
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -85,16 +68,6 @@ function Separator() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.surface },
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: space.xl,
-    paddingTop: space.sm,
-    paddingBottom: space.md,
-  },
-  header: { fontSize: fontSize.xxl, fontWeight: "700", color: colors.text },
-  link: { fontSize: fontSize.body, color: colors.accent, fontWeight: "600" },
   centered: {
     flex: 1,
     alignItems: "center",

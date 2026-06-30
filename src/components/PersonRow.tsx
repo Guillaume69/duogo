@@ -33,13 +33,18 @@ export function PersonRow({ person, cityName, myActivityIds, onPress }: Props) {
           <Text style={styles.name} numberOfLines={1}>
             {person.display_name}
           </Text>
-          {/* Badge « Invited » = j'ai une invitation pending envoyée à cette personne.
-              Pastille accent : un STATUT, visuellement distinct des chips d'activités grises. */}
-          {person.already_invited && (
+          {/* Pastille de statut d'invitation (un STATUT, distinct des chips grises) :
+              « Your turn » (noir) = cette personne m'a invité, à moi d'agir ; « Invited »
+              (accent) = je l'ai invitée, j'attends sa réponse. Au plus un des deux. */}
+          {person.invited_by_them ? (
+            <View style={styles.turnBadge}>
+              <Text style={styles.turnText}>Your turn</Text>
+            </View>
+          ) : person.already_invited ? (
             <View style={styles.invitedBadge}>
               <Text style={styles.invitedText}>Invited</Text>
             </View>
-          )}
+          ) : null}
         </View>
         <Text style={styles.meta} numberOfLines={1}>
           {formatPersonMeta(cityName, person.age, person.distance_m)}
@@ -79,6 +84,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accent,
   },
   invitedText: { fontSize: fontSize.label, fontWeight: "700", color: colors.textOnDark },
+  turnBadge: {
+    paddingHorizontal: space.sm,
+    paddingVertical: space.xxs,
+    borderRadius: radius.pill,
+    backgroundColor: colors.fillDark,
+  },
+  turnText: { fontSize: fontSize.label, fontWeight: "700", color: colors.textOnDark },
   meta: { fontSize: fontSize.sub, color: colors.textMeta },
   chipsWrap: { marginTop: space.xxs },
 });

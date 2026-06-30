@@ -27,7 +27,7 @@ import {
 // Fiche détail d'une personne (poussée depuis Browse). La RPC get_person ne renvoie
 // jamais de coordonnées — uniquement l'âge, une distance grossière, la bio et les
 // intérêts. La ville est la mienne (matching intra-ville) -> lue du LocationProvider.
-// « Invite to Activity » est inactif jusqu'à la brique 4.
+// L'action principale dépend du « tour » de l'invitation active (cf. plus bas).
 type Status = "loading" | "error" | "notfound" | "ready";
 
 // Au-delà de ce nombre de lignes RÉELLES, on plie la bio derrière un « Read More ».
@@ -111,6 +111,12 @@ export default function PersonScreen() {
     });
   }
 
+  // Ouvre l'invitation active entre nous (à répondre ou à consulter).
+  function onOpenInvitation() {
+    if (!person?.active_invitation_id) return;
+    router.push(`/invitation/${person.active_invitation_id}`);
+  }
+
   const canExpandBio =
     bioLineCount !== null && bioLineCount > BIO_PREVIEW_LINES;
 
@@ -163,14 +169,35 @@ export default function PersonScreen() {
             </View>
           </View>
 
-          {/* Action principale. « Invited » (désactivé) si j'ai déjà une invitation
-              pending pour cette personne ; sinon ouvre la modale de composition. */}
-          {person.already_invited ? (
+          {/* Action principale, selon le « tour » de l'invitation active entre nous :
+              - cette personne m'a invité (invited_by_them) -> « Respond to invitation » ;
+              - je l'ai invitée, j'attends (already_invited) -> « Invited » (consultable) ;
+              - aucune invitation active -> « Invite to Activity » (ouvre la composition). */}
+          {person.invited_by_them && person.active_invitation_id ? (
+            <Pressable
+              style={({ pressed }) => [
+                styles.inviteBtn,
+                styles.inviteBtnActive,
+                pressed && styles.pressed,
+              ]}
+              onPress={onOpenInvitation}
+            >
+              <Text style={styles.inviteTextActive}>Respond to invitation</Text>
+            </Pressable>
+          ) : person.already_invited ? (
             <View>
-              <View style={[styles.inviteBtn, styles.invitedBtn]}>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.inviteBtn,
+                  styles.invitedBtn,
+                  pressed && styles.pressed,
+                ]}
+                onPress={onOpenInvitation}
+                disabled={!person.active_invitation_id}
+              >
                 <Text style={styles.invitedText}>Invited</Text>
-              </View>
-              <Text style={styles.inviteHint}>Invitation pending</Text>
+              </Pressable>
+              <Text style={styles.inviteHint}>Waiting for a reply</Text>
             </View>
           ) : (
             <Pressable
