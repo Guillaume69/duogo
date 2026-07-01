@@ -1,7 +1,7 @@
-import { Avatar } from "@/components/Avatar";
-import { ChatComposer } from "@/components/ChatComposer";
-import { ChatPinnedInvitation } from "@/components/ChatPinnedInvitation";
-import { MessageBubble } from "@/components/MessageBubble";
+import { Avatar } from "@/components/ui/Avatar";
+import { ChatComposer } from "@/components/chat/ChatComposer";
+import { ChatPinnedInvitation } from "@/components/chat/ChatPinnedInvitation";
+import { MessageBubble } from "@/components/chat/MessageBubble";
 import {
   getConversation,
   type ConversationDetail,

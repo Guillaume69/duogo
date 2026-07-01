@@ -1,4 +1,4 @@
-import { Avatar } from "@/components/Avatar";
+import { Avatar } from "@/components/ui/Avatar";
 import type { InboxItem } from "@/data/inbox";
 import { colors, fontSize, radius, space } from "@/theme";
 import { formatRelativeShort } from "@/utils/datetime";

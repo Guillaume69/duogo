@@ -1,12 +1,12 @@
-import { FilterButton } from "@/components/FilterButton";
-import { PersonRow } from "@/components/PersonRow";
+import { FilterButton } from "@/components/ui/FilterButton";
+import { PersonRow } from "@/components/person/PersonRow";
 import {
   Centered,
   RetryButton,
   StateText,
   StateTitle,
-} from "@/components/ScreenState";
-import { Segmented } from "@/components/Segmented";
+} from "@/components/ui/ScreenState";
+import { Segmented } from "@/components/ui/Segmented";
 import { useNearbyPeople } from "@/hooks/useNearbyPeople";
 import { useFilters } from "@/providers/filters";
 import { colors, fontSize, space } from "@/theme";

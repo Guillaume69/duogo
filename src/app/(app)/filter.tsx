@@ -1,4 +1,4 @@
-import { ActivityChips } from "@/components/ActivityChips";
+import { ActivityChips } from "@/components/profile/ActivityChips";
 import { fetchActivities, type Activity } from "@/data/activities";
 import type { AgeRange } from "@/data/people";
 import type { Enums } from "@/lib/database.types";

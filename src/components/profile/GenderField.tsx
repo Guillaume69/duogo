@@ -1,4 +1,4 @@
-import { fieldStyles } from "@/components/fieldStyles";
+import { fieldStyles } from "@/components/ui/fieldStyles";
 import type { Enums } from "@/lib/database.types";
 import { GENDER_LABELS, GENDER_VALUES } from "@/utils/profile-fields";
 import { colors, fontSize, space } from "@/theme";

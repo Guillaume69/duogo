@@ -1,5 +1,5 @@
-import { Avatar } from "@/components/Avatar";
-import { InterestChips } from "@/components/InterestChips";
+import { Avatar } from "@/components/ui/Avatar";
+import { InterestChips } from "@/components/profile/InterestChips";
 import type { NearbyPerson } from "@/data/people";
 import { formatPersonMeta } from "@/utils/person-format";
 import { colors, fontSize, radius, space } from "@/theme";

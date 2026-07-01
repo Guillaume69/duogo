@@ -1,7 +1,7 @@
-import { DatePickerRow } from "@/components/DatePickerRow";
-import { FieldLabel } from "@/components/FieldLabel";
-import { InviteTimeField } from "@/components/InviteTimeField";
-import { PickerField, type PickerOption } from "@/components/PickerField";
+import { DatePickerRow } from "@/components/ui/DatePickerRow";
+import { FieldLabel } from "@/components/ui/FieldLabel";
+import { InviteTimeField } from "@/components/invitation/InviteTimeField";
+import { PickerField, type PickerOption } from "@/components/ui/PickerField";
 import { fetchActivities, type Activity } from "@/data/activities";
 import { findNearbyLocations, type NearbyLocation } from "@/data/locations";
 import { useInviteDraft } from "@/providers/invite-draft";

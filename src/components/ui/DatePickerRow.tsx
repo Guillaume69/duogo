@@ -1,4 +1,4 @@
-import { fieldStyles } from "@/components/fieldStyles";
+import { fieldStyles } from "@/components/ui/fieldStyles";
 import DateTimePicker, {
   DateTimePickerAndroid,
 } from "@react-native-community/datetimepicker";

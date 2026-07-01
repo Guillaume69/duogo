@@ -1,5 +1,5 @@
-import { InvitationRow } from "@/components/InvitationRow";
-import { ScreenState, StateText } from "@/components/ScreenState";
+import { InvitationRow } from "@/components/invitation/InvitationRow";
+import { ScreenState, StateText } from "@/components/ui/ScreenState";
 import { useInbox } from "@/hooks/useInbox";
 import { colors, space } from "@/theme";
 import { FlashList } from "@shopify/flash-list";

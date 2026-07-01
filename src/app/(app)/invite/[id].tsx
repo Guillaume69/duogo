@@ -1,4 +1,4 @@
-import { InviteForm } from "@/components/InviteForm";
+import { InviteForm } from "@/components/invitation/InviteForm";
 import { InviteDraftProvider } from "@/providers/invite-draft";
 import { firstName } from "@/utils/person-format";
 import { colors, fontSize, space } from "@/theme";

@@ -1,4 +1,4 @@
-import { Avatar } from "@/components/Avatar";
+import { Avatar } from "@/components/ui/Avatar";
 import { colors, fontSize, space } from "@/theme";
 import { Image } from "expo-image";
 import { Pressable, StyleSheet, Text } from "react-native";

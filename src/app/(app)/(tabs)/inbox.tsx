@@ -1,5 +1,5 @@
-import { InboxRow } from "@/components/InboxRow";
-import { ScreenState, StateText } from "@/components/ScreenState";
+import { InboxRow } from "@/components/inbox/InboxRow";
+import { ScreenState, StateText } from "@/components/ui/ScreenState";
 import { useInboxFeed } from "@/hooks/useInboxFeed";
 import { useInboxBadge } from "@/providers/inbox-badge";
 import { colors, fontSize, space } from "@/theme";

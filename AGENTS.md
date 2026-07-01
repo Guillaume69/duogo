@@ -42,8 +42,11 @@ Router) + **Supabase**. Méthode : **MVP step-by-step**, brique par brique.
 d'état transverse (`auth`, `profile`, `location`, `filters`, `country`, `invite-draft`) · `hooks/`
 hooks React réutilisables non-provider (`useNearbyPeople`, `useEditProfileForm`) · `data/` couche
 d'accès Supabase, fonctions pures (cf. ci-dessous) · `utils/` helpers purs sans React (`datetime`,
-`countries`, `person-format`, `profile-fields`, `invite-events`) · `components/` UI réutilisable ·
-`lib/` **infra bas niveau uniquement** (`supabase.ts`, `database.types.ts`) · `theme.ts` tokens.
+`countries`, `person-format`, `profile-fields`, `invite-events`) · `components/` UI réutilisable
+**rangée par domaine** (`ui/` primitives génériques agnostiques du domaine, puis un dossier par
+feature : `chat/`, `invitation/`, `profile/`, `person/`, `inbox/` — un composant partagé par
+plusieurs features va dans `ui/`) · `lib/` **infra bas niveau uniquement** (`supabase.ts`,
+`database.types.ts`) · `theme.ts` tokens.
 
 **Routing piloté par la session.** Expo Router, file-based, sous `src/app/` uniquement (écrans +
 layouts). Tout le reste du code vit sous `src/` (alias `@/*` → `src/*`). Deux groupes de routes

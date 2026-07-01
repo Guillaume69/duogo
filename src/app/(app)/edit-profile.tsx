@@ -1,8 +1,8 @@
-import { ActivityChips } from "@/components/ActivityChips";
-import { AvatarPicker } from "@/components/AvatarPicker";
-import { BirthDateField } from "@/components/BirthDateField";
-import { FieldLabel } from "@/components/FieldLabel";
-import { GenderField } from "@/components/GenderField";
+import { ActivityChips } from "@/components/profile/ActivityChips";
+import { AvatarPicker } from "@/components/profile/AvatarPicker";
+import { BirthDateField } from "@/components/profile/BirthDateField";
+import { FieldLabel } from "@/components/ui/FieldLabel";
+import { GenderField } from "@/components/profile/GenderField";
 import { useEditProfileForm } from "@/hooks/useEditProfileForm";
 import { colors, fontSize, radius, space } from "@/theme";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";

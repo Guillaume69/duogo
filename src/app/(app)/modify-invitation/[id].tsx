@@ -1,4 +1,4 @@
-import { InviteForm } from "@/components/InviteForm";
+import { InviteForm } from "@/components/invitation/InviteForm";
 import { getInvitation } from "@/data/invitations";
 import {
   InviteDraftProvider,

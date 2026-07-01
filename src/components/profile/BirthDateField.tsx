@@ -1,4 +1,4 @@
-import { DatePickerRow } from "@/components/DatePickerRow";
+import { DatePickerRow } from "@/components/ui/DatePickerRow";
 import { formatBirthDate } from "@/utils/profile-fields";
 
 type Props = {

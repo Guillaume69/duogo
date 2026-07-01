@@ -1,8 +1,8 @@
-import { Avatar } from "@/components/Avatar";
-import { ExpandableBio } from "@/components/ExpandableBio";
-import { InterestChips } from "@/components/InterestChips";
-import { PersonPrimaryAction } from "@/components/PersonPrimaryAction";
-import { ScreenState } from "@/components/ScreenState";
+import { Avatar } from "@/components/ui/Avatar";
+import { ExpandableBio } from "@/components/person/ExpandableBio";
+import { InterestChips } from "@/components/profile/InterestChips";
+import { PersonPrimaryAction } from "@/components/person/PersonPrimaryAction";
+import { ScreenState } from "@/components/ui/ScreenState";
 import { fetchMyActivityIds } from "@/data/activities";
 import { fetchPerson, type Person } from "@/data/people";
 import { useLocation } from "@/providers/location";

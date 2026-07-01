@@ -1,4 +1,4 @@
-import { FieldLabel } from "@/components/FieldLabel";
+import { FieldLabel } from "@/components/ui/FieldLabel";
 import type { InvitationDetail } from "@/data/invitations";
 import { colors, fontSize, radius, space } from "@/theme";
 import {

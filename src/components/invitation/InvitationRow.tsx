@@ -1,5 +1,5 @@
-import { Avatar } from "@/components/Avatar";
-import { StatusBadge } from "@/components/StatusBadge";
+import { Avatar } from "@/components/ui/Avatar";
+import { StatusBadge } from "@/components/invitation/StatusBadge";
 import type { InboxInvitation } from "@/data/invitations";
 import { colors, fontSize, radius, space } from "@/theme";
 import { Pressable, StyleSheet, Text, View } from "react-native";

@@ -1,6 +1,6 @@
-import { Avatar } from "@/components/Avatar";
-import { InvitationCard } from "@/components/InvitationCard";
-import { ScreenState } from "@/components/ScreenState";
+import { Avatar } from "@/components/ui/Avatar";
+import { InvitationCard } from "@/components/invitation/InvitationCard";
+import { ScreenState } from "@/components/ui/ScreenState";
 import {
   getInvitation,
   isInvitationConflictError,

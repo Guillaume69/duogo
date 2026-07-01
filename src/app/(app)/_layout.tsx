@@ -1,4 +1,4 @@
-import { ProfileLoadError, ProfileLoading } from "@/components/ProfileGate";
+import { ProfileLoadError, ProfileLoading } from "@/components/profile/ProfileGate";
 import { FilterProvider } from "@/providers/filters";
 import { InboxBadgeProvider } from "@/providers/inbox-badge";
 import { LocationProvider } from "@/providers/location";
