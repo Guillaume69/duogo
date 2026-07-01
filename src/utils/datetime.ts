@@ -62,6 +62,65 @@ export function formatTimeDisplay(date: Date): string {
   return date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
 }
 
+// Normalise un timestamp Postgres BRUT en ISO strict parsable par Hermes. Le serveur
+// Realtime livre `timestamptz` au format brut « 2026-06-30 12:34:56.789012+00 » (ESPACE au
+// lieu de 'T', fraction à 6 chiffres, offset court) — que le moteur Hermes (Expo) refuse
+// (-> Invalid Date / NaN), alors que PostgREST renvoie déjà de l'ISO « …T…+00:00 ». On
+// homogénéise donc les created_at venus du Realtime avant tout tri/affichage. Chaîne non
+// reconnue (déjà ISO, ou inattendue) -> renvoyée telle quelle (on ne casse rien).
+export function toIsoTimestamp(ts: string): string {
+  const m = ts.match(
+    /^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2}:\d{2})(?:\.(\d+))?([+-]\d{2})(?::?(\d{2}))?$/,
+  );
+  if (!m) return ts;
+  const [, date, time, frac = "0", offHours, offMinutes = "00"] = m;
+  const millis = (frac + "000").slice(0, 3);
+  return `${date}T${time}.${millis}${offHours}:${offMinutes}`;
+}
+
+// Temps relatif court pour les listes (« now », « 5m ago », « 4h ago », « 3d ago »,
+// « 2w ago »). Au-delà de ~1 mois, on bascule sur la date longue (« Jun 30, 2026 »).
+// Sert à la liste Chats (horodatage du dernier message).
+export function formatRelativeShort(iso: string): string {
+  const seconds = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
+  if (seconds < 60) return "now";
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  const weeks = Math.floor(days / 7);
+  if (weeks < 5) return `${weeks}w ago`;
+  return formatDateLong(new Date(iso));
+}
+
+// Deux instants tombent-ils le MÊME jour LOCAL ? (séparateurs de jour dans le chat.)
+export function isSameLocalDay(isoA: string, isoB: string): boolean {
+  const a = new Date(isoA);
+  const b = new Date(isoB);
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+}
+
+// Libellé d'un séparateur de jour dans le chat : « Today » / « Yesterday », sinon la
+// date (avec l'année si différente de l'année courante). Tout en heure LOCALE.
+export function formatDayLabel(iso: string): string {
+  const now = new Date();
+  const nowIso = now.toISOString();
+  if (isSameLocalDay(iso, nowIso)) return "Today";
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  if (isSameLocalDay(iso, yesterday.toISOString())) return "Yesterday";
+  const date = new Date(iso);
+  return date.getFullYear() === now.getFullYear()
+    ? formatDateDisplay(date) // « Mon, Jun 30 »
+    : formatDateLong(date); // « Jun 30, 2025 »
+}
+
 // Créneaux (enum DB) + libellés EN affichés. Valeurs issues des types générés.
 export const TIME_SLOT_VALUES = Constants.public.Enums.time_slot;
 export const TIME_SLOT_LABELS: Record<Enums<"time_slot">, string> = {

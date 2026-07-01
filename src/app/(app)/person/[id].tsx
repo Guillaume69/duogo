@@ -117,6 +117,12 @@ export default function PersonScreen() {
     router.push(`/invitation/${person.active_invitation_id}`);
   }
 
+  // Ouvre le chat de notre conversation (= on est matchés).
+  function onOpenChat() {
+    if (!person?.conversation_id) return;
+    router.push(`/chat/${person.conversation_id}`);
+  }
+
   const canExpandBio =
     bioLineCount !== null && bioLineCount > BIO_PREVIEW_LINES;
 
@@ -169,10 +175,11 @@ export default function PersonScreen() {
             </View>
           </View>
 
-          {/* Action principale, selon le « tour » de l'invitation active entre nous :
+          {/* Action principale, par ordre de priorité :
               - cette personne m'a invité (invited_by_them) -> « Respond to invitation » ;
               - je l'ai invitée, j'attends (already_invited) -> « Invited » (consultable) ;
-              - aucune invitation active -> « Invite to Activity » (ouvre la composition). */}
+              - on est matchés (conversation_id) -> « Message » (ouvre le chat) ;
+              - sinon -> « Invite to Activity » (ouvre la composition). */}
           {person.invited_by_them && person.active_invitation_id ? (
             <Pressable
               style={({ pressed }) => [
@@ -199,6 +206,17 @@ export default function PersonScreen() {
               </Pressable>
               <Text style={styles.inviteHint}>Waiting for a reply</Text>
             </View>
+          ) : person.conversation_id ? (
+            <Pressable
+              style={({ pressed }) => [
+                styles.inviteBtn,
+                styles.inviteBtnActive,
+                pressed && styles.pressed,
+              ]}
+              onPress={onOpenChat}
+            >
+              <Text style={styles.inviteTextActive}>Message</Text>
+            </Pressable>
           ) : (
             <Pressable
               style={({ pressed }) => [

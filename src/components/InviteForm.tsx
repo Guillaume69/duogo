@@ -10,16 +10,8 @@ import { formatDateDisplay } from "@/utils/datetime";
 import { formatDistance } from "@/utils/person-format";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // Formulaire d'invitation, partagé entre la CRÉATION (invite/[id]) et la MODIFY
@@ -141,14 +133,12 @@ export function InviteForm({ submitLabel, submittingLabel }: Props) {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.flex}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
-      <ScrollView
+    <View style={styles.flex}>
+      <KeyboardAwareScrollView
         style={styles.flex}
         contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"
+        bottomOffset={62}
       >
         <FieldLabel>ACTIVITY</FieldLabel>
         <PickerField
@@ -207,7 +197,7 @@ export function InviteForm({ submitLabel, submittingLabel }: Props) {
           maxLength={500}
           textAlignVertical="top"
         />
-      </ScrollView>
+      </KeyboardAwareScrollView>
 
       <View style={[styles.footer, { paddingBottom: insets.bottom + space.md }]}>
         {draft.error && <Text style={styles.error}>{draft.error}</Text>}
@@ -221,7 +211,7 @@ export function InviteForm({ submitLabel, submittingLabel }: Props) {
           </Text>
         </Pressable>
       </View>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 

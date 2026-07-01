@@ -84,6 +84,12 @@ function AppNavigator() {
           name="sent-invitations"
           options={{ headerShown: true, title: "Invitation Sent" }}
         />
+        {/* Chat d'une conversation (poussé depuis la liste Chats / la fiche personne).
+            Le titre (avatar + nom) est fixé par l'écran. */}
+        <Stack.Screen
+          name="chat/[id]"
+          options={{ headerShown: true, title: "Chat" }}
+        />
       </Stack.Protected>
     </Stack>
   );

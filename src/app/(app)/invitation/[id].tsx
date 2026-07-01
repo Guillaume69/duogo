@@ -95,10 +95,16 @@ export default function InvitationScreen() {
       setSubmitting(true);
       setActionError(null);
       try {
-        await respondInvitation({ invitationId: id, accept });
+        const conversationId = await respondInvitation({ invitationId: id, accept });
         // Rafraîchit les badges d'Explore au prochain focus ; l'Inbox recharge au retour.
         markInvitationSent();
-        router.back();
+        // Accepté -> on entre directement dans le chat du match (replace : on ne revient
+        // pas au détail de l'invitation). Refusé -> retour simple à l'Inbox.
+        if (accept && conversationId) {
+          router.replace(`/chat/${conversationId}`);
+        } else {
+          router.back();
+        }
       } catch (e) {
         setActionError(
           isInvitationConflictError(e)

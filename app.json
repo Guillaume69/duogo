@@ -49,7 +49,9 @@
           "photosPermission": "DuoGo accesses your photos to let you set a profile picture."
         }
       ],
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      "./plugins/withLightThemeLock",
+      "./plugins/withAdjustNothing"
     ],
     "experiments": {
       "typedRoutes": true,

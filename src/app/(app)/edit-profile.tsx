@@ -5,16 +5,8 @@ import { FieldLabel } from "@/components/FieldLabel";
 import { GenderField } from "@/components/GenderField";
 import { useEditProfileForm } from "@/hooks/useEditProfileForm";
 import { colors, fontSize, radius, space } from "@/theme";
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // Écran Edit profile : purement présentationnel. Toute la logique vit dans
@@ -24,14 +16,12 @@ export default function EditProfile() {
   const form = useEditProfileForm();
 
   return (
-    <KeyboardAvoidingView
-      style={styles.flex}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-    >
-      <ScrollView
+    <View style={styles.flex}>
+      <KeyboardAwareScrollView
         style={styles.flex}
         contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"
+        bottomOffset={62}
       >
         <AvatarPicker
           path={form.avatarPath}
@@ -80,7 +70,7 @@ export default function EditProfile() {
           selectedIds={form.selectedActivityIds}
           onToggle={form.toggleActivity}
         />
-      </ScrollView>
+      </KeyboardAwareScrollView>
 
       <View style={[styles.footer, { paddingBottom: insets.bottom + 12 }]}>
         {form.error && <Text style={styles.error}>{form.error}</Text>}
@@ -97,7 +87,7 @@ export default function EditProfile() {
           </Text>
         </Pressable>
       </View>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 

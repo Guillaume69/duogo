@@ -101,25 +101,34 @@ export type Database = {
           created_at: string
           id: string
           invitation_id: string
+          last_message_at: string | null
           updated_at: string
           user_a: string
+          user_a_last_read_at: string | null
           user_b: string
+          user_b_last_read_at: string | null
         }
         Insert: {
           created_at?: string
           id?: string
           invitation_id: string
+          last_message_at?: string | null
           updated_at?: string
           user_a: string
+          user_a_last_read_at?: string | null
           user_b: string
+          user_b_last_read_at?: string | null
         }
         Update: {
           created_at?: string
           id?: string
           invitation_id?: string
+          last_message_at?: string | null
           updated_at?: string
           user_a?: string
+          user_a_last_read_at?: string | null
           user_b?: string
+          user_b_last_read_at?: string | null
         }
         Relationships: [
           {
@@ -297,6 +306,45 @@ export type Database = {
           },
         ]
       }
+      messages: {
+        Row: {
+          body: string
+          conversation_id: string
+          created_at: string
+          id: string
+          sender_id: string
+        }
+        Insert: {
+          body: string
+          conversation_id: string
+          created_at?: string
+          id?: string
+          sender_id: string
+        }
+        Update: {
+          body?: string
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profile_activities: {
         Row: {
           activity_id: string
@@ -453,6 +501,22 @@ export type Database = {
           invited_by_them: boolean
         }[]
       }
+      get_conversation: {
+        Args: { p_id: string }
+        Returns: {
+          activity_name: string
+          created_at: string
+          id: string
+          invitation_id: string
+          location_name: string
+          other_avatar_path: string
+          other_id: string
+          other_name: string
+          scheduled_date: string
+          scheduled_time: string
+          time_slot: Database["public"]["Enums"]["time_slot"]
+        }[]
+      }
       get_invitation: {
         Args: { p_id: string }
         Returns: {
@@ -477,6 +541,21 @@ export type Database = {
           status: Database["public"]["Enums"]["invitation_status"]
           time_slot: Database["public"]["Enums"]["time_slot"]
           updated_at: string
+        }[]
+      }
+      get_my_conversations: {
+        Args: never
+        Returns: {
+          activity_name: string
+          created_at: string
+          id: string
+          last_message_at: string
+          last_message_body: string
+          last_message_mine: boolean
+          other_avatar_path: string
+          other_id: string
+          other_name: string
+          unread_count: number
         }[]
       }
       get_my_invitations: {
@@ -527,12 +606,17 @@ export type Database = {
           avatar_path: string
           bio: string
           city_id: string
+          conversation_id: string
           display_name: string
           distance_m: number
           gender: Database["public"]["Enums"]["gender"]
           id: string
           invited_by_them: boolean
         }[]
+      }
+      mark_messages_read: {
+        Args: { p_conversation_id: string }
+        Returns: undefined
       }
       modify_invitation: {
         Args: {

@@ -96,13 +96,17 @@ On teste en dev avec le **numéro de test** `0600000000` → code `123456` (Twil
 - **Décisions** : **Modify avancé** de la brique 8 → brique 5 (demande produit). Pas de temps réel (focus/pull-to-refresh) → live = brique 6, push + badge = brique 8.
 - **Différés (lows documentés)** : flash bref du lieu pré-rempli en Modify ; pas de garde anti-double-tap sur les *push* de navigation ; état « matched » sur la fiche personne → brique 6 (chat).
 
-## Brique 6 — Chat temps réel *(boucle cœur complète)*
+## Brique 6 — Chat temps réel ✅ *(boucle cœur complète)*
 *But : discuter une fois matché.*
-- [ ] Table `messages` + RLS + ajout à la publication `supabase_realtime`
-- [ ] RPC `mark_messages_read` + trigger `last_message_at`
-- [ ] Liste **Chats** + écran `chat/[conversationId]` (FlashList inversée, carte invitation épinglée, composer, abonnement realtime + cleanup)
-- [ ] Décider `@tanstack/react-query` vs helper maison
-- **✅ Acceptation** : invitation acceptée → conversation ; **2 appareils échangent en temps réel**.
+- [x] Table `messages` + RLS (SELECT/INSERT membres ; **GRANT par colonne** : `id`/`created_at` server-only) + ajout à la publication `supabase_realtime`. Écriture **client-directe** (PostgREST + RLS, cas « mes données ») ; lecture des messages aussi (pas de RPC).
+- [x] RPC `mark_messages_read` + trigger `last_message_at` (+ pointeurs de lecture par membre `user_a/b_last_read_at` → non-lus / badge « Your Turn »).
+- [x] RPC `get_my_conversations` (liste Chats enrichie : autre membre, activité, dernier message, non-lus) + `get_conversation` (en-tête + carte épinglée).
+- [x] Onglet Inbox **segmenté Chats | Invitations** (Chats en principal, cf. maquette) + écran `chat/[id]` (**FlashList v2 `startRenderingFromBottom`** — v2 n'a plus `inverted` —, carte invitation épinglée en header, composer natif, bulles, séparateurs de jour, abonnement Realtime + cleanup).
+- [x] `get_person.conversation_id` → bouton **Message** sur la fiche quand matché (**clôt le différé brique 5** « état matched »). Accept d'une invitation → entre direct dans le chat.
+- [x] **Décision** : **helper maison** (hooks `useConversations`/`useChat`), pas de `@tanstack/react-query` (cohérent avec le reste du repo, zéro nouvelle dépendance).
+- **✅ Acceptation** : invitation acceptée → conversation ; **2 appareils échangent en temps réel** (FlashList depuis le bas, dédup par id, normalisation du `created_at` Realtime).
+- **Revue adversariale** (ultracode, 7 dimensions × find→verify, **19 findings → 15 confirmés**, 13 corrigés + 2 différés) : dont **high** = `created_at` Realtime (format Postgres brut non parsable par Hermes → tri + séparateurs cassés) normalisé (`toIsoTimestamp`) ; **medium** = `created_at`/`id` forgeables (→ GRANT colonne), échec d'envoi silencieux (→ erreur inline + `maxLength`), pas de resync au retour au premier plan (→ listener `AppState` + re-snapshot au `SUBSCRIBED`). Lows : index inutile supprimé, débounce `mark_read`, `myId` via ref, course join/snapshot, `bio` nullable honnête, layout timestamp liste, spinner retry, `KeyboardAvoidingView` Android. `tsc`/`lint` verts.
+- **Différés (lows documentés)** : garde anti-double-tap sur les `push` de navigation (app-wide, déjà différé brique 5) ; marquage « lu » d'un message reçu quand le chat est monté mais pas au premier plan (fenêtre étroite, sans perte de donnée) ; **présence « Online »** (Realtime Presence) et **recherche** dans la liste Chats (hors acceptation, non triviaux en natif) → plus tard.
 
 ## Brique 7 — Explore Activities (découverte)
 *But : surface de découverte par activité.*

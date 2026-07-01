@@ -19,6 +19,9 @@ export function useInbox() {
   const reqIdRef = useRef(0);
   const runLoad = useCallback(async () => {
     const ticket = ++reqIdRef.current;
+    // Au 1er chargement (y compris « réessayer » après un échec), on montre le spinner
+    // plein écran ; les rechargements ultérieurs (focus) restent silencieux.
+    if (!loadedOnceRef.current) setStatus("loading");
     let list: InboxInvitation[];
     try {
       list = await listMyInvitations();
