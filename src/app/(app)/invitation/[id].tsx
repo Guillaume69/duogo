@@ -1,5 +1,6 @@
 import { Avatar } from "@/components/Avatar";
 import { InvitationCard } from "@/components/InvitationCard";
+import { ScreenState } from "@/components/ScreenState";
 import {
   getInvitation,
   isInvitationConflictError,
@@ -7,7 +8,7 @@ import {
   respondInvitation,
   type InvitationDetail,
 } from "@/data/invitations";
-import { colors, fontSize, radius, space } from "@/theme";
+import { colors, fontSize, space } from "@/theme";
 import { markInvitationSent } from "@/utils/invite-events";
 import { firstName, formatDistance } from "@/utils/person-format";
 import LocationIcon from "@expo/material-symbols/location_on.xml";
@@ -19,14 +20,7 @@ import {
   useRouter,
 } from "expo-router";
 import { useCallback, useRef, useState } from "react";
-import {
-  ActivityIndicator,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // Détail d'une invitation (poussé depuis l'Inbox ou un futur deep-link). Affiche le
@@ -135,23 +129,15 @@ export default function InvitationScreen() {
     <View style={styles.container}>
       <Stack.Screen options={{ title: detail?.other_name ?? "Invitation" }} />
 
-      {status === "loading" ? (
-        <View style={styles.centered}>
-          <ActivityIndicator />
-        </View>
-      ) : status === "error" ? (
-        <View style={styles.centered}>
-          <Text style={styles.muted}>Couldn’t load this invitation.</Text>
-          <Pressable style={styles.retry} onPress={onRetry}>
-            <Text style={styles.retryText}>Try again</Text>
-          </Pressable>
-        </View>
-      ) : status === "notfound" || !detail ? (
-        <View style={styles.centered}>
-          <Text style={styles.title}>Invitation unavailable</Text>
-          <Text style={styles.muted}>This invitation isn’t available anymore.</Text>
-        </View>
-      ) : (
+      <ScreenState
+        status={status}
+        errorText="Couldn’t load this invitation."
+        onRetry={onRetry}
+        notFoundTitle="Invitation unavailable"
+        notFoundText="This invitation isn’t available anymore."
+      />
+
+      {status === "ready" && detail ? (
         <>
           <ScrollView contentContainerStyle={styles.scroll}>
             <View style={styles.headerBlock}>
@@ -210,7 +196,7 @@ export default function InvitationScreen() {
             </View>
           ) : null}
         </>
-      )}
+      ) : null}
     </View>
   );
 }
@@ -242,23 +228,6 @@ function metaFor(d: InvitationDetail): string {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.surface },
-  centered: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: space.md,
-    paddingHorizontal: space.xl,
-  },
-  title: { fontSize: fontSize.lg, fontWeight: "700", color: colors.text },
-  muted: { fontSize: fontSize.sub, color: colors.textMuted, textAlign: "center" },
-  retry: {
-    marginTop: space.sm,
-    paddingHorizontal: space.xl,
-    paddingVertical: space.md,
-    borderRadius: radius.field,
-    backgroundColor: colors.fillDark,
-  },
-  retryText: { fontSize: fontSize.body, fontWeight: "600", color: colors.textOnDark },
   scroll: { padding: space.xl, gap: space.xl },
   headerBlock: { alignItems: "center", gap: space.sm },
   name: { fontSize: fontSize.xl, fontWeight: "700", color: colors.text },

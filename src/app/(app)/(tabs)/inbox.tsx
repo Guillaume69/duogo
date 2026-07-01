@@ -1,11 +1,12 @@
 import { InboxRow } from "@/components/InboxRow";
+import { ScreenState, StateText } from "@/components/ScreenState";
 import { useInboxFeed } from "@/hooks/useInboxFeed";
 import { useInboxBadge } from "@/providers/inbox-badge";
-import { colors, fontSize, radius, space } from "@/theme";
+import { colors, fontSize, space } from "@/theme";
 import { FlashList } from "@shopify/flash-list";
 import { useFocusEffect, useRouter } from "expo-router";
-import { useCallback, useEffect, type PropsWithChildren } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import { useCallback, useEffect } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 // Onglet Inbox — flux UNIFIÉ (brique 6.5) : une ligne par personne, matchs et invitations qui
@@ -40,18 +41,13 @@ export default function InboxScreen() {
         </Pressable>
       </View>
 
-      {status === "loading" ? (
-        <Centered>
-          <ActivityIndicator />
-        </Centered>
-      ) : status === "error" ? (
-        <Centered>
-          <Text style={styles.muted}>Couldn’t load your inbox.</Text>
-          <Pressable style={styles.retry} onPress={reload}>
-            <Text style={styles.retryText}>Try again</Text>
-          </Pressable>
-        </Centered>
-      ) : (
+      <ScreenState
+        status={status}
+        errorText="Couldn’t load your inbox."
+        onRetry={reload}
+      />
+
+      {status === "ready" ? (
         <FlashList
           data={items}
           keyExtractor={(i) => `${i.kind}:${i.target_id}`}
@@ -72,19 +68,15 @@ export default function InboxScreen() {
           onRefresh={onRefresh}
           ListEmptyComponent={
             <View style={styles.empty}>
-              <Text style={styles.muted}>
+              <StateText>
                 Nothing here yet. Invite someone to an activity to get started.
-              </Text>
+              </StateText>
             </View>
           }
         />
-      )}
+      ) : null}
     </SafeAreaView>
   );
-}
-
-function Centered({ children }: PropsWithChildren) {
-  return <View style={styles.centered}>{children}</View>;
 }
 
 function Separator() {
@@ -103,22 +95,6 @@ const styles = StyleSheet.create({
   },
   header: { fontSize: fontSize.xxl, fontWeight: "700", color: colors.text },
   link: { fontSize: fontSize.body, color: colors.accent, fontWeight: "600" },
-  centered: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: space.md,
-    paddingHorizontal: space.xl,
-  },
-  muted: { fontSize: fontSize.sub, color: colors.textMuted, textAlign: "center" },
-  retry: {
-    marginTop: space.sm,
-    paddingHorizontal: space.xl,
-    paddingVertical: space.md,
-    borderRadius: radius.field,
-    backgroundColor: colors.fillDark,
-  },
-  retryText: { fontSize: fontSize.body, fontWeight: "600", color: colors.textOnDark },
   separator: {
     height: StyleSheet.hairlineWidth,
     backgroundColor: colors.divider,

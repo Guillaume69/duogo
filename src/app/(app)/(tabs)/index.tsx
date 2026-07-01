@@ -1,20 +1,20 @@
 import { FilterButton } from "@/components/FilterButton";
 import { PersonRow } from "@/components/PersonRow";
+import {
+  Centered,
+  RetryButton,
+  StateText,
+  StateTitle,
+} from "@/components/ScreenState";
 import { Segmented } from "@/components/Segmented";
-import { useFilters } from "@/providers/filters";
-import { consumeInvitationSent } from "@/utils/invite-events";
 import { useNearbyPeople } from "@/hooks/useNearbyPeople";
-import { colors, fontSize, radius, space } from "@/theme";
+import { useFilters } from "@/providers/filters";
+import { colors, fontSize, space } from "@/theme";
+import { consumeInvitationSent } from "@/utils/invite-events";
 import { FlashList } from "@shopify/flash-list";
 import { useFocusEffect, useRouter } from "expo-router";
-import { useCallback, useState, type PropsWithChildren } from "react";
-import {
-  ActivityIndicator,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { useCallback, useState } from "react";
+import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 // Onglet Explore. Segmented People | Activities (Activities = brique 7, vide).
@@ -64,35 +64,29 @@ export default function ExploreScreen() {
 
       {tab === "activities" ? (
         <Centered>
-          <Text style={styles.muted}>Activities coming soon.</Text>
+          <StateText>Activities coming soon.</StateText>
         </Centered>
       ) : locStatus === "loading" ? (
         <Centered>
           <ActivityIndicator />
-          <Text style={styles.muted}>Finding people near you…</Text>
+          <StateText>Finding people near you…</StateText>
         </Centered>
       ) : locStatus === "denied" ? (
         <Centered>
-          <Text style={styles.title}>Location needed</Text>
-          <Text style={styles.muted}>
-            Enable location to see people around you.
-          </Text>
+          <StateTitle>Location needed</StateTitle>
+          <StateText>Enable location to see people around you.</StateText>
           <RetryButton onPress={onRetryLocation} />
         </Centered>
       ) : locStatus === "error" ? (
         <Centered>
-          <Text style={styles.title}>Couldn’t get your location</Text>
-          <Text style={styles.muted}>
-            Check your connection and try again.
-          </Text>
+          <StateTitle>Couldn’t get your location</StateTitle>
+          <StateText>Check your connection and try again.</StateText>
           <RetryButton onPress={onRetryLocation} />
         </Centered>
       ) : locStatus === "outside" ? (
         <Centered>
-          <Text style={styles.title}>You’re outside our area</Text>
-          <Text style={styles.muted}>
-            DuoGo isn’t available in your city yet.
-          </Text>
+          <StateTitle>You’re outside our area</StateTitle>
+          <StateText>DuoGo isn’t available in your city yet.</StateText>
         </Centered>
       ) : (
         <View style={styles.flex}>
@@ -105,7 +99,7 @@ export default function ExploreScreen() {
           </View>
           {peopleStatus === "error" ? (
             <Centered>
-              <Text style={styles.muted}>Couldn’t load people.</Text>
+              <StateText>Couldn’t load people.</StateText>
               <RetryButton onPress={onRefresh} />
             </Centered>
           ) : (
@@ -128,11 +122,11 @@ export default function ExploreScreen() {
                   {peopleStatus === "loading" ? (
                     <ActivityIndicator />
                   ) : (
-                    <Text style={styles.muted}>
+                    <StateText>
                       {activeCount > 0
                         ? "No one matches your filters yet."
                         : "No one’s around you yet."}
-                    </Text>
+                    </StateText>
                   )}
                 </View>
               }
@@ -141,18 +135,6 @@ export default function ExploreScreen() {
         </View>
       )}
     </SafeAreaView>
-  );
-}
-
-function Centered({ children }: PropsWithChildren) {
-  return <View style={styles.centered}>{children}</View>;
-}
-
-function RetryButton({ onPress }: { onPress: () => void }) {
-  return (
-    <Pressable style={styles.retry} onPress={onPress}>
-      <Text style={styles.retryText}>Try again</Text>
-    </Pressable>
   );
 }
 
@@ -184,27 +166,6 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sub,
     fontWeight: "600",
     color: colors.textMuted,
-  },
-  centered: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: space.md,
-    paddingHorizontal: space.xl,
-  },
-  title: { fontSize: fontSize.lg, fontWeight: "700", color: colors.text },
-  muted: { fontSize: fontSize.sub, color: colors.textMuted, textAlign: "center" },
-  retry: {
-    marginTop: space.sm,
-    paddingHorizontal: space.xl,
-    paddingVertical: space.md,
-    borderRadius: radius.field,
-    backgroundColor: colors.fillDark,
-  },
-  retryText: {
-    fontSize: fontSize.body,
-    fontWeight: "600",
-    color: colors.textOnDark,
   },
   separator: {
     height: StyleSheet.hairlineWidth,
