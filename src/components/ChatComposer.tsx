@@ -1,27 +1,23 @@
 import { colors, fontSize, radius, space } from "@/theme";
 import SendIcon from "@expo/material-symbols/send.xml";
 import { Host, Icon } from "@expo/ui";
-import { useRef, useState } from "react";
-import {
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { useState } from "react";
+import { Pressable, StyleSheet, TextInput, View } from "react-native";
 
 // Borne du corps (alignée sur la contrainte base char_length <= 2000) — UX seulement, la
 // base reste propriétaire de l'invariant (doublon assumé).
 const MAX_MESSAGE_LENGTH = 2000;
 
 // Barre de composition d'un message (bas du chat). Champ multiligne + bouton d'envoi natif.
-// En cas d'échec d'envoi, le texte est conservé (réessai) et une erreur est affichée ; le
-// texte n'est effacé qu'au succès.
+// Envoi OPTIMISTE : au tap, on vide le champ IMMÉDIATEMENT et on délègue l'envoi (la bulle
+// "sending" apparaît côté liste, cf. useChat/MessageBubble). Le composer ne suit donc plus
+// l'état d'envoi (plus de gel de l'UI) ; en cas d'échec, c'est la bulle qui propose le réessai.
+// Vider tout de suite ferme aussi la fenêtre de double-envoi : le 2e tap voit un champ vide.
 export function ChatComposer({
   onSend,
   bottomInset,
 }: {
-  onSend: (body: string) => Promise<void>;
+  onSend: (body: string) => void;
   // Safe-area de repos (constante), portée en paddingBottom du composer. Clavier ouvert, le
   // conteneur parent (écran chat) la soustrait de son paddingBottom animé (dérivé de la
   // SharedValue clavier) -> pas de double comptage, pas de gap au-dessus du clavier. Jamais
@@ -29,44 +25,22 @@ export function ChatComposer({
   bottomInset: number;
 }) {
   const [text, setText] = useState("");
-  const [sending, setSending] = useState(false);
-  const [failed, setFailed] = useState(false);
-  // Garde SYNCHRONE anti-double-envoi : `sending` (état React) n'est vrai qu'au re-render
-  // suivant, donc deux taps dans le même tick le liraient tous deux à false et enverraient
-  // deux fois (message immuable + dédup par id serveur distinct -> doublon irrémédiable). La
-  // ref ferme la fenêtre dès le 1er appel. `sending` reste pour l'UI (bouton désactivé).
-  const sendingRef = useRef(false);
-  const canSend = text.trim().length > 0 && !sending;
+  const canSend = text.trim().length > 0;
 
-  async function handleSend() {
-    if (sendingRef.current || !canSend) return;
-    sendingRef.current = true;
-    setSending(true);
-    setFailed(false);
-    try {
-      await onSend(text);
-      setText(""); // succès seulement
-    } catch {
-      setFailed(true); // on garde le texte saisi pour permettre un réessai
-    } finally {
-      sendingRef.current = false;
-      setSending(false);
-    }
+  function handleSend() {
+    const body = text.trim();
+    if (!body) return;
+    setText(""); // vidé tout de suite : l'envoi est optimiste (la bulle apparaît côté liste)
+    onSend(body);
   }
 
   return (
     <View style={[styles.wrap, { paddingBottom: bottomInset + space.sm }]}>
-      {failed ? (
-        <Text style={styles.error}>Couldn’t send. Check your connection and try again.</Text>
-      ) : null}
       <View style={styles.bar}>
         <TextInput
           style={styles.input}
           value={text}
-          onChangeText={(t) => {
-            setText(t);
-            if (failed) setFailed(false);
-          }}
+          onChangeText={setText}
           placeholder="Message…"
           placeholderTextColor={colors.textFaint}
           maxLength={MAX_MESSAGE_LENGTH}
@@ -76,15 +50,19 @@ export function ChatComposer({
           style={[styles.sendBtn, !canSend && styles.sendBtnDisabled]}
           onPress={handleSend}
           disabled={!canSend}
-          hitSlop={8}
+          hitSlop={12}
         >
-          <Host matchContents>
-            <Icon
-              name={{ ios: "arrow.up", android: SendIcon }}
-              size={20}
-              color={colors.textOnDark}
-            />
-          </Host>
+          {/* Host = vue native @expo/ui : neutralisée (pointerEvents none) pour qu'elle
+              n'avale pas le touch -> tout le tap tombe sur le Pressable (cf. FilterButton). */}
+          <View pointerEvents="none">
+            <Host matchContents>
+              <Icon
+                name={{ ios: "arrow.up", android: SendIcon }}
+                size={22}
+                color={colors.textOnDark}
+              />
+            </Host>
+          </View>
         </Pressable>
       </View>
     </View>
@@ -98,21 +76,16 @@ const styles = StyleSheet.create({
     borderTopColor: colors.divider,
     backgroundColor: colors.surface,
   },
-  error: {
-    color: colors.danger,
-    fontSize: fontSize.hint,
-    paddingHorizontal: space.xl,
-    paddingBottom: space.sm,
-  },
   bar: {
     flexDirection: "row",
     alignItems: "flex-end",
     gap: space.sm,
-    paddingHorizontal: space.xl,
+    // Padding latéral resserré (< padding d'écran) : plus de largeur pour l'input + le bouton.
+    paddingHorizontal: space.md,
   },
   input: {
     flex: 1,
-    minHeight: 40,
+    minHeight: 44,
     maxHeight: 120,
     backgroundColor: colors.fill,
     borderRadius: radius.pill,
@@ -123,8 +96,8 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   sendBtn: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     borderRadius: radius.pill,
     backgroundColor: colors.fillDark,
     alignItems: "center",

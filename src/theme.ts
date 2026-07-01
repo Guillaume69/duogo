@@ -50,6 +50,10 @@ export const radius = {
   pill: 20, // chips / pills
 } as const;
 
+export const opacity = {
+  pending: 0.5, // élément « en cours » (ex. bulle d'un message en envoi optimiste)
+} as const;
+
 export const space = {
   xxs: 2,
   xs: 4,

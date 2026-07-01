@@ -5,9 +5,8 @@ import { MessageBubble } from "@/components/MessageBubble";
 import {
   getConversation,
   type ConversationDetail,
-  type Message,
 } from "@/data/conversations";
-import { useChat } from "@/hooks/useChat";
+import { useChat, type ChatMessage } from "@/hooks/useChat";
 import { useProfile } from "@/providers/profile";
 import { colors, fontSize, radius, space } from "@/theme";
 import { formatDayLabel, isSameLocalDay } from "@/utils/datetime";
@@ -79,6 +78,7 @@ export default function ChatScreen() {
     messages,
     status: msgStatus,
     send,
+    retry,
     reload: reloadMessages,
   } = useChat(id ?? "", myId);
 
@@ -92,7 +92,7 @@ export default function ChatScreen() {
   // flottaison. On corrige donc à la main : scrollToOffset(0) (= bas visuel) quand le dernier message
   // change, si c'est le nôtre (on vient de l'envoyer) ou si on est déjà en bas (on ne dérange pas la
   // lecture d'historique). `nearBottom`/`lastMsgId` en refs : pas de re-render sur le scroll.
-  const listRef = useRef<FlashListRef<Message>>(null);
+  const listRef = useRef<FlashListRef<ChatMessage>>(null);
   const nearBottomRef = useRef(true);
   const lastMsgIdRef = useRef<string | null>(null);
 
@@ -107,7 +107,7 @@ export default function ChatScreen() {
     const isFirstFill = lastMsgIdRef.current === null;
     lastMsgIdRef.current = newest.id;
     if (isFirstFill) return;
-    if (newest.sender_id === myId || nearBottomRef.current) {
+    if (newest.senderId === myId || nearBottomRef.current) {
       listRef.current?.scrollToOffset({ offset: 0, animated: true });
     }
   }, [orderedMessages, myId]);
@@ -142,21 +142,25 @@ export default function ChatScreen() {
   // change de jour (ou tout en haut de liste). L'item est contre-inversé par FlashList, donc le
   // label placé au-dessus de la bulle s'affiche bien au-dessus visuellement.
   const renderItem = useCallback(
-    ({ item, index }: { item: Message; index: number }) => {
+    ({ item, index }: { item: ChatMessage; index: number }) => {
       const older =
         index < orderedMessages.length - 1 ? orderedMessages[index + 1] : null;
       const showDay =
-        !older || !isSameLocalDay(older.created_at, item.created_at);
+        !older || !isSameLocalDay(older.createdAt, item.createdAt);
       return (
         <View style={styles.item}>
           {showDay ? (
-            <Text style={styles.dayLabel}>{formatDayLabel(item.created_at)}</Text>
+            <Text style={styles.dayLabel}>{formatDayLabel(item.createdAt)}</Text>
           ) : null}
-          <MessageBubble message={item} mine={item.sender_id === myId} />
+          <MessageBubble
+            item={item}
+            mine={item.senderId === myId}
+            onRetry={() => retry(item.id)}
+          />
         </View>
       );
     },
-    [orderedMessages, myId],
+    [orderedMessages, myId, retry],
   );
 
   // Footer (haut visuel en liste inversée) = carte d'invitation épinglée. Mémoïsé : sinon

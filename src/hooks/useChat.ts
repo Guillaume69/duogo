@@ -5,14 +5,40 @@ import {
   subscribeToMessages,
   type Message,
 } from "@/data/conversations";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AppState } from "react-native";
 
 // Orchestration d'UN fil de chat : chargement (snapshot) + abonnement Realtime (INSERT de
-// messages de cette conversation) + envoi + accusé de lecture, avec cleanup au démontage.
+// messages de cette conversation) + envoi OPTIMISTE + accusé de lecture, avec cleanup au démontage.
 // La RLS du serveur Realtime ne pousse qu'aux membres ; on filtre quand même par
 // conversation_id côté abonnement (un canal par conversation).
 export type ChatStatus = "loading" | "error" | "ready";
+
+// Statut d'envoi d'un message. Seuls MES messages transitent par "sending"/"failed" (envoi
+// optimiste) ; tout ce qui vient du serveur (snapshot / Realtime) est "sent".
+export type SendStatus = "sent" | "sending" | "failed";
+
+// Message tel que consommé par l'écran : forme UNIFIÉE des messages confirmés (lignes DB) et
+// des messages optimistes (encore en vol / échoués), pour que la liste n'ait qu'un seul type à
+// rendre. `id` = id serveur si confirmé, id temporaire si optimiste.
+export type ChatMessage = {
+  id: string;
+  body: string;
+  senderId: string;
+  createdAt: string;
+  status: SendStatus;
+};
+
+// Message optimiste : affiché DÈS le tap, avant réponse serveur. Le GRANT colonne interdit au
+// client de forger `id`/`created_at` -> on porte un id temporaire local, réconcilié à la
+// confirmation en RETIRANT l'optimiste (la vraie ligne entre par la réponse POST de sendMessage,
+// puis l'écho Realtime éventuel est dédupé par id serveur). Sur échec : passe "failed" (retry).
+type PendingMessage = {
+  tempId: string;
+  body: string;
+  createdAt: string;
+  status: "sending" | "failed";
+};
 
 // Fusionne des messages en dédupliquant par id (PREMIER vu conservé : un message est
 // IMMUABLE -> l'écho Realtime ne doit pas écraser la version déjà en place). Tri
@@ -29,8 +55,36 @@ function mergeMessages(prev: Message[], incoming: Message[]): Message[] {
 }
 
 export function useChat(conversationId: string, myId: string | null) {
-  const [messages, setMessages] = useState<Message[]>([]);
+  // Messages CONFIRMÉS (lignes DB) : snapshot + Realtime + réponse d'un envoi.
+  const [serverMessages, setServerMessages] = useState<Message[]>([]);
+  // Messages OPTIMISTES (client only) : en vol / échoués, en attente de réconciliation.
+  const [pending, setPending] = useState<PendingMessage[]>([]);
   const [status, setStatus] = useState<ChatStatus>("loading");
+
+  // Vue unifiée pour l'écran : confirmés (triés chrono) PUIS optimistes (les plus récents, en
+  // fin -> bas de l'écran après inversion). L'optimiste garde sa place en bas jusqu'à
+  // confirmation, où il est retiré et la vraie ligne prend sa position chrono réelle.
+  const messages = useMemo<ChatMessage[]>(() => {
+    const confirmed = serverMessages.map(
+      (m): ChatMessage => ({
+        id: m.id,
+        body: m.body,
+        senderId: m.sender_id,
+        createdAt: m.created_at,
+        status: "sent",
+      }),
+    );
+    const optimistic = pending.map(
+      (p): ChatMessage => ({
+        id: p.tempId,
+        body: p.body,
+        senderId: myId ?? "",
+        createdAt: p.createdAt,
+        status: p.status,
+      }),
+    );
+    return [...confirmed, ...optimistic];
+  }, [serverMessages, pending, myId]);
 
   // myId lu dans le callback Realtime SANS coupler le cycle de vie de l'abonnement
   // (sinon un changement de myId relancerait l'effet -> re-souscription du même topic).
@@ -38,6 +92,17 @@ export function useChat(conversationId: string, myId: string | null) {
   useEffect(() => {
     myIdRef.current = myId;
   }, [myId]);
+
+  // Miroir synchrone de `pending` pour que `retry` lise le corps du message échoué sans
+  // dépendre d'une closure potentiellement périmée ni re-déclencher de rendu.
+  const pendingRef = useRef<PendingMessage[]>([]);
+  useEffect(() => {
+    pendingRef.current = pending;
+  }, [pending]);
+
+  // Compteur d'ids temporaires (unique par montage du hook, suffisant pour dédupliquer les
+  // optimistes entre eux ; pas de Date/random).
+  const tempIdRef = useRef(0);
 
   // Garde « effet vivant » : ignore tout résultat async après démontage / changement d'id.
   const aliveRef = useRef(true);
@@ -53,7 +118,7 @@ export function useChat(conversationId: string, myId: string | null) {
     try {
       const initial = await listMessages(conversationId);
       if (!aliveRef.current) return;
-      setMessages((prev) => mergeMessages(prev, initial));
+      setServerMessages((prev) => mergeMessages(prev, initial));
       loadedOkRef.current = true;
       setStatus("ready");
     } catch {
@@ -81,7 +146,7 @@ export function useChat(conversationId: string, myId: string | null) {
     const unsubscribe = subscribeToMessages(conversationId, {
       onInsert: (incoming) => {
         if (!aliveRef.current) return;
-        setMessages((prev) => mergeMessages(prev, [incoming]));
+        setServerMessages((prev) => mergeMessages(prev, [incoming]));
         // Message entrant de l'autre, écran ouvert -> on marque lu (débounce anti-rafale).
         if (incoming.sender_id !== myIdRef.current) scheduleMarkRead();
       },
@@ -112,21 +177,72 @@ export function useChat(conversationId: string, myId: string | null) {
     };
   }, [conversationId, loadSnapshot, scheduleMarkRead]);
 
-  const send = useCallback(
-    async (body: string) => {
-      const uid = myIdRef.current;
-      if (!uid) return;
-      const trimmed = body.trim();
-      if (!trimmed) return;
-      const msg = await sendMessage({
-        conversationId,
-        senderId: uid,
-        body: trimmed,
-      });
-      setMessages((prev) => mergeMessages(prev, [msg]));
+  // Envoi réseau d'un optimiste + réconciliation. Succès : la vraie ligne entre dans
+  // serverMessages ET l'optimiste est retiré (React 18 batch les 2 setState -> une seule passe,
+  // pas de clignotement). L'écho Realtime de ce message (même id serveur) sera dédupé. Échec :
+  // l'optimiste passe "failed" (le corps reste affiché, réessai possible via `retry`).
+  const deliver = useCallback(
+    async (tempId: string, uid: string, body: string) => {
+      try {
+        const msg = await sendMessage({
+          conversationId,
+          senderId: uid,
+          body,
+        });
+        if (!aliveRef.current) return;
+        setServerMessages((prev) => mergeMessages(prev, [msg]));
+        setPending((prev) => prev.filter((p) => p.tempId !== tempId));
+      } catch {
+        if (!aliveRef.current) return;
+        setPending((prev) =>
+          prev.map((p) =>
+            p.tempId === tempId ? { ...p, status: "failed" } : p,
+          ),
+        );
+      }
     },
     [conversationId],
   );
 
-  return { messages, status, send, reload: loadSnapshot };
+  // Envoi OPTIMISTE : la bulle "sending" est ajoutée SYNCHRONEMENT (l'UI ne fige plus), puis le
+  // POST part en arrière-plan. Le trim/garde vide reste (doublon UX assumé de la contrainte base).
+  const send = useCallback(
+    (body: string) => {
+      const uid = myIdRef.current;
+      if (!uid) return;
+      const trimmed = body.trim();
+      if (!trimmed) return;
+      tempIdRef.current += 1;
+      const tempId = `pending-${tempIdRef.current}`;
+      setPending((prev) => [
+        ...prev,
+        {
+          tempId,
+          body: trimmed,
+          createdAt: new Date().toISOString(),
+          status: "sending",
+        },
+      ]);
+      void deliver(tempId, uid, trimmed);
+    },
+    [deliver],
+  );
+
+  // Réessai d'un optimiste échoué (tap sur la bulle "Not delivered"). Repasse "sending" puis
+  // relance le même POST. No-op si l'entrée n'est plus là ou n'est pas en échec.
+  const retry = useCallback(
+    (tempId: string) => {
+      const uid = myIdRef.current;
+      if (!uid) return;
+      const target = pendingRef.current.find((p) => p.tempId === tempId);
+      if (!target || target.status !== "failed") return;
+      setPending((prev) =>
+        prev.map((p) => (p.tempId === tempId ? { ...p, status: "sending" } : p)),
+      );
+      void deliver(tempId, uid, target.body);
+    },
+    [deliver],
+  );
+
+  return { messages, status, send, retry, reload: loadSnapshot };
 }
