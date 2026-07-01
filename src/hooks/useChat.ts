@@ -2,10 +2,9 @@ import {
   listMessages,
   markConversationRead,
   sendMessage,
+  subscribeToMessages,
   type Message,
 } from "@/data/conversations";
-import { supabase } from "@/lib/supabase";
-import { toIsoTimestamp } from "@/utils/datetime";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AppState } from "react-native";
 
@@ -75,34 +74,20 @@ export function useChat(conversationId: string, myId: string | null) {
     aliveRef.current = true;
     loadedOkRef.current = false;
 
-    const channel = supabase.channel(`messages:${conversationId}`);
-    channel.on<Message>(
-      "postgres_changes",
-      {
-        event: "INSERT",
-        schema: "public",
-        table: "messages",
-        filter: `conversation_id=eq.${conversationId}`,
-      },
-      (payload) => {
+    // Abonnement Realtime encapsulé côté data (le hook n'importe pas supabase, cf. AGENTS.md).
+    // Les gardes de cycle de vie React (aliveRef) restent ici. onSubscribed re-fire à chaque
+    // (re)connexion du canal -> re-snapshot : ferme la course join/snapshot et comble un trou
+    // après coupure de socket.
+    const unsubscribe = subscribeToMessages(conversationId, {
+      onInsert: (incoming) => {
         if (!aliveRef.current) return;
-        // Realtime livre created_at au format Postgres brut (espace, offset court) que
-        // Hermes ne parse pas -> on le normalise en ISO avant tri/affichage.
-        const incoming: Message = {
-          ...payload.new,
-          created_at: toIsoTimestamp(payload.new.created_at),
-        };
         setMessages((prev) => mergeMessages(prev, [incoming]));
         // Message entrant de l'autre, écran ouvert -> on marque lu (débounce anti-rafale).
         if (incoming.sender_id !== myIdRef.current) scheduleMarkRead();
       },
-    );
-    // Garantit le JWT côté Realtime pour que la RLS autorise la diffusion.
-    void supabase.realtime.setAuth();
-    // Re-snapshot quand l'abonnement devient ACTIF : ferme la course join/snapshot, et
-    // SUBSCRIBED re-fire à la reconnexion -> comble un trou après une coupure de socket.
-    channel.subscribe((subStatus) => {
-      if (aliveRef.current && subStatus === "SUBSCRIBED") void loadSnapshot();
+      onSubscribed: () => {
+        if (aliveRef.current) void loadSnapshot();
+      },
     });
 
     // Chargement immédiat (indépendant du Realtime : le fil s'affiche même si le socket
@@ -123,7 +108,7 @@ export function useChat(conversationId: string, myId: string | null) {
       aliveRef.current = false;
       if (markTimerRef.current) clearTimeout(markTimerRef.current);
       appStateSub.remove();
-      void supabase.removeChannel(channel);
+      unsubscribe();
     };
   }, [conversationId, loadSnapshot, scheduleMarkRead]);
 

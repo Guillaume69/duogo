@@ -11,29 +11,47 @@ import { useChat } from "@/hooks/useChat";
 import { useProfile } from "@/providers/profile";
 import { colors, fontSize, radius, space } from "@/theme";
 import { formatDayLabel, isSameLocalDay } from "@/utils/datetime";
-import { FlashList } from "@shopify/flash-list";
+import { FlashList, type FlashListRef } from "@shopify/flash-list";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
   StyleSheet,
   Text,
   View,
-  type LayoutChangeEvent,
-  type ScrollViewProps,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
 } from "react-native";
-import {
-  KeyboardChatScrollView,
-  KeyboardStickyView,
-} from "react-native-keyboard-controller";
-import { useSharedValue } from "react-native-reanimated";
+import { useReanimatedKeyboardAnimation } from "react-native-keyboard-controller";
+import Animated, { useAnimatedStyle } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-// Écran de chat d'une conversation (= match). Carte d'invitation épinglée en tête du fil,
-// messages en ordre chronologique (rendu depuis le bas, idiome chat de FlashList v2),
-// composer en bas, temps réel via useChat (abonnement Realtime + cleanup).
+// Écran de chat d'une conversation (= match). Deux idiomes combinés :
+//  1. Liste INVERSÉE (idiome chat) : le message le plus récent est à l'offset natif 0 = le bas de
+//     l'écran. Conséquence : l'écran s'ouvre calé en bas SANS aucune correction de scroll (donc plus
+//     de snap), et un nouveau message reste collé en bas.
+//  2. Composer DANS LE FLUX (pas d'overlay absolu) : la liste `flex:1` est bornée par le haut du
+//     composer, donc le dernier message est toujours juste au-dessus de lui — sans spacer ni inset à
+//     réserver (l'ancien spacer JS partait de 0 -> course au 1er paint, donc « parfois en dessous »).
+//     Quand le composer grandit/rétrécit (multiligne), la liste suit dans la MÊME passe de layout :
+//     pas de saut en deux temps.
+// Le suivi du clavier est piloté par un `paddingBottom` animé sur le conteneur, dérivé DIRECTEMENT
+// de la SharedValue clavier (`useReanimatedKeyboardAnimation().height`, frame-par-frame). On rétrécit
+// le conteneur par le bas -> le composer monte et la liste inversée garde le récent collé au-dessus.
+// On a écarté `KeyboardAvoidingView` : sa version `automaticOffset` détecte sa position à l'écran
+// (viewPositionInWindow, async) et ce calcul RATAIT par moments -> le clavier recouvrait l'input.
+// La valeur clavier, elle, est déterministe (aucune mesure de frame). `height` est négatif à
+// l'ouverture ; le conteneur touche le bas de l'écran donc `-height` = hauteur clavier suffit,
+// header natif indifférent. On retire `insets.bottom` (le composer la porte déjà au repos) pour
+// coller au clavier sans gap. L'inversion retourne l'ordre visuel -> la carte d'invitation épinglée
+// (tête du fil) est un ListFooterComponent. Temps réel via useChat (abonnement Realtime + cleanup).
 type DetailStatus = "loading" | "error" | "notfound" | "ready";
+
+// En liste inversée, l'offset natif 0 = le bas visuel (message le plus récent). En-deçà de ce seuil
+// (px) on considère que l'utilisateur « est en bas » : un nouveau message y auto-scrolle alors ; au-delà
+// (il lit l'historique) on le laisse tranquille (MVCP garde sa position stable).
+const NEAR_BOTTOM_PX = 120;
 
 export default function ChatScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -42,38 +60,14 @@ export default function ChatScreen() {
   const insets = useSafeAreaInsets();
   const myId = profile?.id ?? null;
 
-  // Hauteur PLEINE mesurée du composer (barre absolue, safe-area incluse). SharedValue lue
-  // frame-par-frame par KeyboardChatScrollView : réserve cette place en bas du fil pour que le
-  // dernier message ne passe jamais sous le composer, clavier ouvert comme fermé.
-  const composerHeight = useSharedValue(0);
-  const onComposerLayout = useCallback(
-    (e: LayoutChangeEvent) => {
-      // onLayout tourne sur le thread JS : muter la SharedValue est le pattern reanimated
-      // standard (pas de runOnJS). La règle immutability est un faux positif ici.
-      // eslint-disable-next-line react-hooks/immutability
-      composerHeight.value = e.nativeEvent.layout.height;
-    },
-    [composerHeight],
-  );
-
-  // La ScrollView interne de la FlashList devient une KeyboardChatScrollView : elle étend la
-  // zone scrollable frame-par-frame (contentInset), SANS passe de layout -> la liste et le
-  // composer suivent le clavier sur la MÊME timeline UI-thread (fin du snap/lag). Invariant :
-  // offset == KeyboardStickyView.opened == insets.bottom (le fil ne se décale que de
-  // keyboardHeight - insets.bottom, donc pas de gap au-dessus du clavier). useCallback à réfs
-  // stables -> pas de remount de la ScrollView = pas de saut de scroll. FlashList v2 injecte le
-  // ref DANS props -> le spread le transmet (zéro `as`).
-  const renderScrollComponent = useCallback(
-    (props: ScrollViewProps) => (
-      <KeyboardChatScrollView
-        {...props}
-        offset={insets.bottom}
-        extraContentPadding={composerHeight}
-        keyboardLiftBehavior="always"
-      />
-    ),
-    [insets.bottom, composerHeight],
-  );
+  // Évitement du clavier, déterministe : `height` va de 0 (fermé) à -kbHeight (ouvert). Le conteneur
+  // touche le bas de l'écran -> paddingBottom = hauteur clavier lève le composer + la liste au-dessus.
+  // On soustrait insets.bottom (déjà porté par le composer au repos) pour ne pas doubler la safe-area
+  // clavier ouvert ; clamp >= 0 pour rester neutre clavier fermé. Aucune mesure de frame -> pas de flaky.
+  const { height: keyboardHeight } = useReanimatedKeyboardAnimation();
+  const keyboardAvoidStyle = useAnimatedStyle(() => ({
+    paddingBottom: Math.max(-keyboardHeight.value - insets.bottom, 0),
+  }));
 
   const [detail, setDetail] = useState<ConversationDetail | null>(null);
   const [detailStatus, setDetailStatus] = useState<DetailStatus>("loading");
@@ -87,6 +81,36 @@ export default function ChatScreen() {
     send,
     reload: reloadMessages,
   } = useChat(id ?? "", myId);
+
+  // Liste inversée -> data[0] est au bas visuel. useChat trie du plus ancien au plus récent : on
+  // inverse pour mettre le plus RÉCENT en tête (data[0]), donc en bas de l'écran.
+  const orderedMessages = useMemo(() => messages.slice().reverse(), [messages]);
+
+  // Auto-scroll en bas quand un message arrive. L'auto-scroll natif de FlashList (autoscrollToBottom
+  // -> scrollToEnd) vise la FIN du scroll = le haut visuel en inverted : inutilisable ici. Et MVCP
+  // (activé par défaut) ancre l'ancien contenu quand on prepend -> le nouveau passe SOUS la ligne de
+  // flottaison. On corrige donc à la main : scrollToOffset(0) (= bas visuel) quand le dernier message
+  // change, si c'est le nôtre (on vient de l'envoyer) ou si on est déjà en bas (on ne dérange pas la
+  // lecture d'historique). `nearBottom`/`lastMsgId` en refs : pas de re-render sur le scroll.
+  const listRef = useRef<FlashListRef<Message>>(null);
+  const nearBottomRef = useRef(true);
+  const lastMsgIdRef = useRef<string | null>(null);
+
+  const onScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    nearBottomRef.current = e.nativeEvent.contentOffset.y <= NEAR_BOTTOM_PX;
+  }, []);
+
+  useEffect(() => {
+    const newest = orderedMessages[0];
+    if (!newest || lastMsgIdRef.current === newest.id) return;
+    // Premier remplissage : la liste inversée cale déjà en bas, ne pas scroller.
+    const isFirstFill = lastMsgIdRef.current === null;
+    lastMsgIdRef.current = newest.id;
+    if (isFirstFill) return;
+    if (newest.sender_id === myId || nearBottomRef.current) {
+      listRef.current?.scrollToOffset({ offset: 0, animated: true });
+    }
+  }, [orderedMessages, myId]);
 
   // En-tête (autre membre + invitation épinglée). Chargé une fois (statique).
   useEffect(() => {
@@ -112,12 +136,17 @@ export default function ChatScreen() {
     setReloadKey((k) => k + 1);
   }
 
-  // Séparateur de jour : visible au-dessus du 1er message d'un jour différent du précédent.
+  // Séparateur de jour : au sommet de chaque groupe de jour, i.e. au-dessus du message le plus
+  // ANCIEN de ce jour. Données en newest-first -> le voisin visuellement au-dessus de
+  // orderedMessages[i] est orderedMessages[i+1] (plus ancien). On montre le label quand ce voisin
+  // change de jour (ou tout en haut de liste). L'item est contre-inversé par FlashList, donc le
+  // label placé au-dessus de la bulle s'affiche bien au-dessus visuellement.
   const renderItem = useCallback(
     ({ item, index }: { item: Message; index: number }) => {
-      const prev = index > 0 ? messages[index - 1] : null;
+      const older =
+        index < orderedMessages.length - 1 ? orderedMessages[index + 1] : null;
       const showDay =
-        !prev || !isSameLocalDay(prev.created_at, item.created_at);
+        !older || !isSameLocalDay(older.created_at, item.created_at);
       return (
         <View style={styles.item}>
           {showDay ? (
@@ -127,7 +156,35 @@ export default function ChatScreen() {
         </View>
       );
     },
-    [messages, myId],
+    [orderedMessages, myId],
+  );
+
+  // Footer (haut visuel en liste inversée) = carte d'invitation épinglée. Mémoïsé : sinon
+  // l'élément et sa closure onPress seraient recréés à chaque nouveau message (re-render de
+  // l'écran) alors que `detail`, chargé une seule fois, est statique.
+  const pinnedFooter = useMemo(
+    () =>
+      detail ? (
+        <ChatPinnedInvitation
+          detail={detail}
+          onPress={() => router.push(`/invitation/${detail.invitation_id}`)}
+        />
+      ) : null,
+    [detail, router],
+  );
+
+  // Header (bas visuel) = encart d'erreur de chargement des messages. Mémoïsé de même.
+  const loadErrorHeader = useMemo(
+    () =>
+      msgStatus === "error" ? (
+        <View style={styles.loadErrorBox}>
+          <Text style={styles.loadError}>Couldn’t load messages.</Text>
+          <Pressable style={styles.retry} onPress={reloadMessages}>
+            <Text style={styles.retryText}>Try again</Text>
+          </Pressable>
+        </View>
+      ) : null,
+    [msgStatus, reloadMessages],
   );
 
   // !id => route invalide -> « indisponible » (dérivé, sans setState synchrone en effet).
@@ -172,53 +229,35 @@ export default function ChatScreen() {
           <Text style={styles.muted}>This conversation isn’t available anymore.</Text>
         </View>
       ) : (
-        // Pattern officiel « Building a chat app » de keyboard-controller (la doc déconseille
-        // explicitement KeyboardAvoidingView/KeyboardAwareScrollView pour un chat : frame drops).
-        // - Liste : FlashList dont la ScrollView interne EST une KeyboardChatScrollView
-        //   (via renderScrollComponent) -> suit le clavier frame-par-frame, sans passe de layout.
-        // - Composer : KeyboardStickyView absolu en bas, translaté en Y avec le clavier.
-        //   offset.opened = insets.bottom absorbe la safe-area à l'ouverture (pas de gap).
-        // Une SEULE valeur clavier animée (UI-thread) pilote liste + composer -> plus de snap
-        // à la fermeture ni de lag des messages à l'ouverture.
-        <View style={styles.flex}>
+        // Conteneur flex : la liste inversée prend la place restante au-dessus du composer (dans le
+        // flux). Son paddingBottom animé (dérivé du clavier) réduit le conteneur par le bas
+        // frame-par-frame -> composer + liste montent ensemble, sans snap ni lag.
+        <Animated.View style={[styles.flex, keyboardAvoidStyle]}>
           <FlashList
-            data={messages}
+            ref={listRef}
+            inverted
+            style={styles.flex}
+            data={orderedMessages}
             keyExtractor={(m) => m.id}
             renderItem={renderItem}
-            renderScrollComponent={renderScrollComponent}
-            ListHeaderComponent={
-              <ChatPinnedInvitation
-                detail={detail}
-                onPress={() => router.push(`/invitation/${detail.invitation_id}`)}
-              />
-            }
+            onScroll={onScroll}
+            scrollEventThrottle={16}
+            // MVCP natif COUPÉ. Activé par défaut, il ancre l'ancien contenu quand on prepend
+            // (minIndexForVisible: 0) : le nouveau message passe alors sous la ligne de flottaison,
+            // et il recale AU NIVEAU NATIF (avant nos effets JS) -> notre scroll se faisait écraser
+            // (aggravé par le double-insert envoi+écho Realtime). Coupé : à l'offset 0 (bas visuel),
+            // un prepend laisse l'offset à 0 -> le nouveau message s'affiche en bas de lui-même ;
+            // l'effet ci-dessus ne fait plus que snapper au bas quand on était légèrement remonté.
+            maintainVisibleContentPosition={{ disabled: true }}
             contentContainerStyle={styles.listContent}
-            maintainVisibleContentPosition={{
-              startRenderingFromBottom: true,
-              autoscrollToBottomThreshold: 0.2,
-            }}
-            ListFooterComponent={
-              msgStatus === "error" ? (
-                <View style={styles.loadErrorBox}>
-                  <Text style={styles.loadError}>Couldn’t load messages.</Text>
-                  <Pressable style={styles.retry} onPress={reloadMessages}>
-                    <Text style={styles.retryText}>Try again</Text>
-                  </Pressable>
-                </View>
-              ) : null
-            }
+            // Inversion -> l'ordre visuel est retourné : le footer (DOM) s'affiche EN HAUT, le header
+            // EN BAS. L'invitation épinglée (haut du fil) est donc un ListFooterComponent ; l'erreur
+            // de chargement, qui doit rester près des messages récents (bas), est un ListHeaderComponent.
+            ListFooterComponent={pinnedFooter}
+            ListHeaderComponent={loadErrorHeader}
           />
-          <KeyboardStickyView
-            offset={{ closed: 0, opened: insets.bottom }}
-            style={styles.composerHost}
-          >
-            <ChatComposer
-              onSend={send}
-              bottomInset={insets.bottom}
-              onLayout={onComposerLayout}
-            />
-          </KeyboardStickyView>
-        </View>
+          <ChatComposer onSend={send} bottomInset={insets.bottom} />
+        </Animated.View>
       )}
     </View>
   );
@@ -227,8 +266,6 @@ export default function ChatScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.surface },
   flex: { flex: 1 },
-  // Composer collé en bas, superposé à la liste ; le KeyboardStickyView le remonte avec le clavier.
-  composerHost: { position: "absolute", left: 0, right: 0, bottom: 0 },
   centered: {
     flex: 1,
     alignItems: "center",
@@ -248,7 +285,9 @@ const styles = StyleSheet.create({
   retryText: { fontSize: fontSize.body, fontWeight: "600", color: colors.textOnDark },
   headerTitle: { flexDirection: "row", alignItems: "center", gap: space.sm },
   headerName: { fontSize: fontSize.lg, fontWeight: "700", color: colors.text },
-  listContent: { paddingTop: space.lg, paddingBottom: space.sm },
+  // Liste inversée : paddingTop rend au bas visuel (sous le message récent, au-dessus du composer),
+  // paddingBottom au haut visuel (au-dessus de l'invitation épinglée).
+  listContent: { paddingTop: space.sm, paddingBottom: space.lg },
   item: { marginTop: space.xs },
   dayLabel: {
     alignSelf: "center",

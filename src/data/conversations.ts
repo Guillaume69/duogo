@@ -1,5 +1,6 @@
 import type { Database, Enums } from "@/lib/database.types";
 import { supabase } from "@/lib/supabase";
+import { toIsoTimestamp } from "@/utils/datetime";
 
 // Couche d'accès « conversations » (le chat du match). La LISTE des conversations et le
 // détail d'en-tête passent par des RPC enrichies (security definer, jamais de coords) ;
@@ -54,7 +55,7 @@ export async function getConversation(
 }
 
 // Les `limit` messages les plus RÉCENTS d'une conversation, remis en ordre CHRONOLOGIQUE
-// (ancien -> récent) pour l'affichage (FlashList `startRenderingFromBottom`). RLS : membre
+// (ancien -> récent). L'écran chat re-inverse pour sa liste `inverted`. RLS : membre
 // seulement. Pagination « charger plus ancien » : différée (les fils du MVP sont courts).
 export async function listMessages(
   conversationId: string,
@@ -100,4 +101,45 @@ export async function markConversationRead(
     p_conversation_id: conversationId,
   });
   if (error) throw error;
+}
+
+// Abonnement Realtime aux nouveaux messages d'UNE conversation (INSERT). Encapsule toute
+// l'infra Supabase (canal, auth, cleanup) pour que le hook consommateur n'importe pas
+// `supabase` ni ne connaisse les tables (couche data = seule frontière DB). La RLS SELECT
+// serveur ne pousse qu'aux membres ; on filtre en plus par `conversation_id` (un canal par
+// conversation). `created_at` arrive au format Postgres brut (que Hermes ne parse pas) -> on
+// le normalise en ISO ici, à la frontière data. `onSubscribed` re-fire à chaque (re)connexion
+// du canal -> l'appelant s'en sert pour re-snapshoter (course join/snapshot, trou après
+// coupure de socket). Renvoie la fonction de désabonnement (à appeler au cleanup).
+export function subscribeToMessages(
+  conversationId: string,
+  handlers: {
+    onInsert: (message: Message) => void;
+    onSubscribed: () => void;
+  },
+): () => void {
+  const channel = supabase.channel(`messages:${conversationId}`);
+  channel.on<Message>(
+    "postgres_changes",
+    {
+      event: "INSERT",
+      schema: "public",
+      table: "messages",
+      filter: `conversation_id=eq.${conversationId}`,
+    },
+    (payload) => {
+      handlers.onInsert({
+        ...payload.new,
+        created_at: toIsoTimestamp(payload.new.created_at),
+      });
+    },
+  );
+  // Garantit le JWT côté Realtime pour que la RLS autorise la diffusion.
+  void supabase.realtime.setAuth();
+  channel.subscribe((status) => {
+    if (status === "SUBSCRIBED") handlers.onSubscribed();
+  });
+  return () => {
+    void supabase.removeChannel(channel);
+  };
 }

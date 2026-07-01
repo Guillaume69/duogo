@@ -1,14 +1,13 @@
 import { colors, fontSize, radius, space } from "@/theme";
 import SendIcon from "@expo/material-symbols/send.xml";
 import { Host, Icon } from "@expo/ui";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   Pressable,
   StyleSheet,
   Text,
   TextInput,
   View,
-  type LayoutChangeEvent,
 } from "react-native";
 
 // Borne du corps (alignée sur la contrainte base char_length <= 2000) — UX seulement, la
@@ -21,22 +20,27 @@ const MAX_MESSAGE_LENGTH = 2000;
 export function ChatComposer({
   onSend,
   bottomInset,
-  onLayout,
 }: {
   onSend: (body: string) => Promise<void>;
-  // Safe-area de repos (constante) : à l'ouverture du clavier, le KeyboardStickyView parent
-  // l'absorbe via son offset `opened` -> pas de double comptage, pas de gap. Jamais togglé.
+  // Safe-area de repos (constante), portée en paddingBottom du composer. Clavier ouvert, le
+  // conteneur parent (écran chat) la soustrait de son paddingBottom animé (dérivé de la
+  // SharedValue clavier) -> pas de double comptage, pas de gap au-dessus du clavier. Jamais
+  // togglé côté composer.
   bottomInset: number;
-  // Mesure de la hauteur pleine du composer, réservée en bas du fil de messages par l'écran.
-  onLayout: (e: LayoutChangeEvent) => void;
 }) {
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const [failed, setFailed] = useState(false);
+  // Garde SYNCHRONE anti-double-envoi : `sending` (état React) n'est vrai qu'au re-render
+  // suivant, donc deux taps dans le même tick le liraient tous deux à false et enverraient
+  // deux fois (message immuable + dédup par id serveur distinct -> doublon irrémédiable). La
+  // ref ferme la fenêtre dès le 1er appel. `sending` reste pour l'UI (bouton désactivé).
+  const sendingRef = useRef(false);
   const canSend = text.trim().length > 0 && !sending;
 
   async function handleSend() {
-    if (!canSend) return;
+    if (sendingRef.current || !canSend) return;
+    sendingRef.current = true;
     setSending(true);
     setFailed(false);
     try {
@@ -45,15 +49,13 @@ export function ChatComposer({
     } catch {
       setFailed(true); // on garde le texte saisi pour permettre un réessai
     } finally {
+      sendingRef.current = false;
       setSending(false);
     }
   }
 
   return (
-    <View
-      onLayout={onLayout}
-      style={[styles.wrap, { paddingBottom: bottomInset + space.sm }]}
-    >
+    <View style={[styles.wrap, { paddingBottom: bottomInset + space.sm }]}>
       {failed ? (
         <Text style={styles.error}>Couldn’t send. Check your connection and try again.</Text>
       ) : null}
@@ -123,7 +125,7 @@ const styles = StyleSheet.create({
   sendBtn: {
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: radius.pill,
     backgroundColor: colors.fillDark,
     alignItems: "center",
     justifyContent: "center",
