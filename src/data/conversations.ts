@@ -2,26 +2,14 @@ import type { Database, Enums } from "@/lib/database.types";
 import { supabase } from "@/lib/supabase";
 import { toIsoTimestamp } from "@/utils/datetime";
 
-// Couche d'accès « conversations » (le chat du match). La LISTE des conversations et le
-// détail d'en-tête passent par des RPC enrichies (security definer, jamais de coords) ;
-// la LISTE des messages et l'ENVOI passent en DIRECT par PostgREST + RLS (cas simple
-// « mes données » d'AGENTS.md) ; le pointeur de lecture par une RPC (pas de GRANT update).
+// Couche d'accès « conversations » (le chat du match). Le détail d'en-tête d'un chat passe par
+// une RPC enrichie (security definer, jamais de coords) ; la LISTE des messages et l'ENVOI
+// passent en DIRECT par PostgREST + RLS (cas simple « mes données » d'AGENTS.md) ; le pointeur
+// de lecture par une RPC (pas de GRANT update). La LISTE des conversations, elle, est désormais
+// fournie par le flux unifié get_inbox (cf. src/data/inbox.ts, brique 6.5).
 
 // Un message tel que stocké (type généré, zéro `as`). Immuable (ni édition ni suppression).
 export type Message = Database["public"]["Tables"]["messages"]["Row"];
-
-// Une ligne de la liste Chats. Le générateur type les colonnes d'un RETURNS TABLE en
-// non-null ; or `last_message_*` sont NULL tant qu'aucun message n'a été échangé -> on
-// resserre honnêtement (garde `!== null` obligatoire côté UI).
-type RawConversationListItem =
-  Database["public"]["Functions"]["get_my_conversations"]["Returns"][number];
-export type ConversationListItem = Omit<
-  RawConversationListItem,
-  "last_message_body" | "last_message_at"
-> & {
-  last_message_body: string | null;
-  last_message_at: string | null;
-};
 
 // L'en-tête d'un chat + le résumé de l'invitation épinglée. Nullables au runtime resserrés :
 // `location_name` (lieu optionnel), et le couple `time_slot` XOR `scheduled_time` (l'un des
@@ -36,14 +24,6 @@ export type ConversationDetail = Omit<
   time_slot: Enums<"time_slot"> | null;
   scheduled_time: string | null;
 };
-
-// Mes conversations (matchs), enrichies (autre membre, activité, dernier message, non lus),
-// triées côté base : la plus fraîche d'abord.
-export async function listMyConversations(): Promise<ConversationListItem[]> {
-  const { data, error } = await supabase.rpc("get_my_conversations");
-  if (error) throw error;
-  return data ?? [];
-}
 
 // Détail d'UNE conversation dont je suis membre. 0 ligne (non membre / inexistante) -> null.
 export async function getConversation(

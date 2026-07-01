@@ -517,6 +517,24 @@ export type Database = {
           time_slot: Database["public"]["Enums"]["time_slot"]
         }[]
       }
+      get_inbox: {
+        Args: never
+        Returns: {
+          activity_name: string
+          kind: string
+          last_message_body: string
+          last_message_mine: boolean
+          needs_me: boolean
+          other_avatar_path: string
+          other_id: string
+          other_name: string
+          sort_ts: string
+          state: string
+          target_id: string
+          unread_count: number
+        }[]
+      }
+      get_inbox_count: { Args: never; Returns: number }
       get_invitation: {
         Args: { p_id: string }
         Returns: {

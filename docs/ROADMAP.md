@@ -108,6 +108,39 @@ On teste en dev avec le **numéro de test** `0600000000` → code `123456` (Twil
 - **Revue adversariale** (ultracode, 7 dimensions × find→verify, **19 findings → 15 confirmés**, 13 corrigés + 2 différés) : dont **high** = `created_at` Realtime (format Postgres brut non parsable par Hermes → tri + séparateurs cassés) normalisé (`toIsoTimestamp`) ; **medium** = `created_at`/`id` forgeables (→ GRANT colonne), échec d'envoi silencieux (→ erreur inline + `maxLength`), pas de resync au retour au premier plan (→ listener `AppState` + re-snapshot au `SUBSCRIBED`). Lows : index inutile supprimé, débounce `mark_read`, `myId` via ref, course join/snapshot, `bio` nullable honnête, layout timestamp liste, spinner retry, `KeyboardAvoidingView` Android. `tsc`/`lint` verts.
 - **Différés (lows documentés)** : garde anti-double-tap sur les `push` de navigation (app-wide, déjà différé brique 5) ; marquage « lu » d'un message reçu quand le chat est monté mais pas au premier plan (fenêtre étroite, sans perte de donnée) ; **présence « Online »** (Realtime Presence) et **recherche** dans la liste Chats (hors acceptation, non triviaux en natif) → plus tard.
 
+## Brique 6.5 — Inbox unifiée (un fil par personne)
+*But : fusionner « chats + invitations + sent » (3 endroits, frontière `incoming/outgoing`
+bancale) en UN flux cohérent, une ligne par personne, avec un compteur d'attention unique sur
+l'onglet. L'axe de rangement devient « ça m'attend, oui/non », plus « qui a envoyé ».*
+- [x] RPC `get_inbox` (`security definer`) : UNION des conversations (matchs) + des invitations
+  qui **m'attendent** (`awaiting_response_from = moi`, actives, hors paires déjà matchées) en
+  une ligne homogène (`kind`, `state`, `needs_me`, `sort_ts`, aperçu, activité). Tri : mon tour
+  d'abord puis récence. `needs_me` d'une conversation = pointeur de lecture NULL **ou** non-lus > 0
+  (un match jamais ouvert compte ; celui qui accepte a ouvert le chat -> pointeur posé -> ne compte pas).
+- [x] RPC `get_inbox_count` = `count(*) where needs_me` de `get_inbox` (source **unique** du badge).
+- [x] Onglet **Inbox** = une seule `FlashList` (`InboxRow`), plus de `Segmented` ; aperçu + badge
+  « Your Turn » pilotés par `state` ; tap -> `chat/[id]` ou `invitation/[id]` selon `kind`.
+- [x] Écran **Sent** = file d'attente vivante : invitations où **j'attends l'autre**
+  (`!awaiting_me`, actives) ; les résolues en sortent (accepté -> chat dans l'Inbox / refusé -> disparaît).
+- [x] **Badge natif** d'onglet (`NativeTabs.Trigger.Badge`, vérifié dans le package SDK 56) alimenté
+  par `InboxBadgeProvider` / `useInboxBadge` : fetch au montage + retour au premier plan ; quand l'Inbox
+  est montée, le compte est **dérivé de la liste chargée** (`setCount`, pas de 2ᵉ RPC). La
+  différenciation message/invitation vit dans la **ligne** (et le **texte** des push en brique 8).
+- [x] Nettoyage : `useConversations`/`ConversationRow` supprimés ; `data/conversations` perd la liste
+  (désormais via `get_inbox`). Migration `20260701130000` appliquée au distant + types régénérés.
+- **✅ Acceptation** : un seul flux lisible (invites + chats mêlés, tri « mon tour » d'abord) ; badge
+  reflétant « ce qui m'attend » ; `tsc`/`lint` verts. **Vérifié bout-en-bout** (seed 6 lignes Inbox +
+  4 Sent, badge 4, appel réel de `get_inbox` connecté au compte de test) + testé sur device.
+- **Revue adversariale** (ultracode, 3 dimensions × find→verify, 7 findings → **5 confirmés, tous low**) :
+  corrigés — **#4** `other_avatar_path` resserré `string | null` (règle « typer honnêtement à la source ») ;
+  **#5** double exécution de `get_inbox` au focus supprimée (badge dérivé de la liste via `setCount`).
+  Réfutés : « code mort declined » (`subtitleFor` atteignable), « asymétrie du fold » (inatteignable).
+- **Différés (lows documentés)** : **#1** ré-invitation après match repliée hors flux+badge — **non
+  atteignable via l'UI** (fiche « Message » quand matché), à reprendre avec la ré-invitation in-chat ;
+  **#2** `get_inbox_count` recalcule tout `get_inbox` (perf, acceptable à l'échelle MVP — few conversations) ;
+  **#3** badge non-live entre deux visites de l'onglet (over-count après Accept / under-count sur message
+  reçu) — s'auto-corrige au re-focus de l'Inbox ; le live = **brique 8** (Realtime/push).
+
 ## Brique 7 — Explore Activities (découverte)
 *But : surface de découverte par activité.*
 - [ ] Explore → **Activities** (`ActivityCard` + `AvatarStack` « +12 »)

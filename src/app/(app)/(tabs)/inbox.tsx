@@ -1,52 +1,35 @@
-import { ConversationRow } from "@/components/ConversationRow";
-import { InvitationRow } from "@/components/InvitationRow";
-import { Segmented } from "@/components/Segmented";
-import { useConversations } from "@/hooks/useConversations";
-import { useInbox } from "@/hooks/useInbox";
+import { InboxRow } from "@/components/InboxRow";
+import { useInboxFeed } from "@/hooks/useInboxFeed";
+import { useInboxBadge } from "@/providers/inbox-badge";
 import { colors, fontSize, radius, space } from "@/theme";
 import { FlashList } from "@shopify/flash-list";
 import { useFocusEffect, useRouter } from "expo-router";
-import { useCallback, useState, type PropsWithChildren } from "react";
+import { useCallback, useEffect, type PropsWithChildren } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-// Onglet Inbox. Deux segments (cf. maquette) : « Chats » (conversations = matchs, en
-// principal) et « Invitations » (reçues + actionnables). Lien « Sent » vers les envoyées.
-// Le segment actif se (re)charge au focus de l'onglet ET au changement de segment (le
-// callback de useFocusEffect dépend de `segment`, donc il est rejoué quand il change).
-type Segment = "chats" | "invitations";
-
+// Onglet Inbox — flux UNIFIÉ (brique 6.5) : une ligne par personne, matchs et invitations qui
+// m'attendent mêlés, triés « mon tour d'abord puis récence » (cf. get_inbox). Fini les 3 endroits
+// (chats / invitations / sent) et la frontière incoming/outgoing bancale : l'axe est « ça m'attend
+// ou pas » (badge « Your Turn »). Le lien « Sent » ouvre la file d'attente des invitations où
+// j'attends l'AUTRE. Au focus : on recharge la liste ET on rafraîchit le compteur du badge.
 export default function InboxScreen() {
   const router = useRouter();
-  const [segment, setSegment] = useState<Segment>("chats");
-
-  const {
-    status: convStatus,
-    conversations,
-    refreshing: convRefreshing,
-    onRefresh: convRefresh,
-    reload: convReload,
-  } = useConversations();
-  const {
-    status: invStatus,
-    invitations,
-    refreshing: invRefreshing,
-    onRefresh: invRefresh,
-    reload: invReload,
-  } = useInbox();
+  const { status, items, refreshing, onRefresh, reload } = useInboxFeed();
+  const { setCount } = useInboxBadge();
 
   useFocusEffect(
     useCallback(() => {
-      if (segment === "chats") void convReload();
-      else void invReload();
-    }, [segment, convReload, invReload]),
+      void reload();
+    }, [reload]),
   );
 
-  // Invitations en principal = reçues ET tout ce qui attend mon action (une invitation
-  // ENVOYÉE renvoyée via Modify revient à moi -> sinon ratée dans « Sent » seulement).
-  const received = invitations.filter(
-    (i) => i.direction === "incoming" || i.awaiting_me,
-  );
+  // Le badge se DÉRIVE de la liste déjà chargée (compteur d'attention = nb de lignes needs_me) :
+  // pas de 2e RPC quand l'Inbox est montée (get_inbox_count ré-exécute tout le flux). Le provider
+  // garde son propre fetch pour les cas où la liste n'est pas montée (montage / retour au 1er plan).
+  useEffect(() => {
+    if (status === "ready") setCount(items.filter((i) => i.needs_me).length);
+  }, [items, status, setCount]);
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -57,78 +40,41 @@ export default function InboxScreen() {
         </Pressable>
       </View>
 
-      <View style={styles.segmentRow}>
-        <Segmented
-          options={[
-            { value: "chats", label: "Chats" },
-            { value: "invitations", label: "Invitations" },
-          ]}
-          value={segment}
-          onChange={setSegment}
-        />
-      </View>
-
-      {segment === "chats" ? (
-        convStatus === "loading" ? (
-          <Centered>
-            <ActivityIndicator />
-          </Centered>
-        ) : convStatus === "error" ? (
-          <Centered>
-            <Text style={styles.muted}>Couldn’t load your chats.</Text>
-            <Pressable style={styles.retry} onPress={convReload}>
-              <Text style={styles.retryText}>Try again</Text>
-            </Pressable>
-          </Centered>
-        ) : (
-          <FlashList
-            data={conversations}
-            keyExtractor={(c) => c.id}
-            renderItem={({ item }) => (
-              <ConversationRow
-                conversation={item}
-                onPress={() => router.push(`/chat/${item.id}`)}
-              />
-            )}
-            ItemSeparatorComponent={Separator}
-            refreshing={convRefreshing}
-            onRefresh={convRefresh}
-            ListEmptyComponent={
-              <View style={styles.empty}>
-                <Text style={styles.muted}>
-                  No chats yet. Accept an invitation to start chatting.
-                </Text>
-              </View>
-            }
-          />
-        )
-      ) : invStatus === "loading" ? (
+      {status === "loading" ? (
         <Centered>
           <ActivityIndicator />
         </Centered>
-      ) : invStatus === "error" ? (
+      ) : status === "error" ? (
         <Centered>
-          <Text style={styles.muted}>Couldn’t load your invitations.</Text>
-          <Pressable style={styles.retry} onPress={invReload}>
+          <Text style={styles.muted}>Couldn’t load your inbox.</Text>
+          <Pressable style={styles.retry} onPress={reload}>
             <Text style={styles.retryText}>Try again</Text>
           </Pressable>
         </Centered>
       ) : (
         <FlashList
-          data={received}
-          keyExtractor={(i) => i.id}
+          data={items}
+          keyExtractor={(i) => `${i.kind}:${i.target_id}`}
           renderItem={({ item }) => (
-            <InvitationRow
-              invitation={item}
-              onPress={() => router.push(`/invitation/${item.id}`)}
+            <InboxRow
+              item={item}
+              onPress={() =>
+                router.push(
+                  item.kind === "conversation"
+                    ? `/chat/${item.target_id}`
+                    : `/invitation/${item.target_id}`,
+                )
+              }
             />
           )}
           ItemSeparatorComponent={Separator}
-          refreshing={invRefreshing}
-          onRefresh={invRefresh}
+          refreshing={refreshing}
+          onRefresh={onRefresh}
           ListEmptyComponent={
             <View style={styles.empty}>
-              <Text style={styles.muted}>No invitations yet.</Text>
+              <Text style={styles.muted}>
+                Nothing here yet. Invite someone to an activity to get started.
+              </Text>
             </View>
           }
         />
@@ -153,10 +99,10 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: space.xl,
     paddingTop: space.sm,
+    paddingBottom: space.md,
   },
   header: { fontSize: fontSize.xxl, fontWeight: "700", color: colors.text },
   link: { fontSize: fontSize.body, color: colors.accent, fontWeight: "600" },
-  segmentRow: { paddingHorizontal: space.xl, paddingVertical: space.md },
   centered: {
     flex: 1,
     alignItems: "center",

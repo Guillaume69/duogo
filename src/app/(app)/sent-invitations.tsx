@@ -6,9 +6,11 @@ import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, type PropsWithChildren } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 
-// Écran « Invitation Sent » (poussé depuis l'Inbox). Liste les invitations ENVOYÉES avec
-// leur statut. Tap -> détail (lecture seule tant que c'est à l'autre de répondre ; si
-// l'autre a demandé des changements, c'est redevenu mon tour -> actions disponibles).
+// Écran « Invitation Sent » (poussé depuis l'Inbox) = FILE D'ATTENTE VIVANTE (brique 6.5) :
+// les invitations où j'attends L'AUTRE (mon tour est passé, invitation encore active), quel que
+// soit le sens d'origine — une invitation reçue puis renvoyée via Modify y figure aussi. Les
+// résolues en sortent : acceptée -> chat dans l'Inbox, refusée -> disparaît. Ce qui M'attend, lui,
+// vit dans l'Inbox (pas ici). Tap -> détail (lecture seule tant que c'est à l'autre de répondre).
 export default function SentInvitationsScreen() {
   const router = useRouter();
   const { status, invitations, refreshing, onRefresh, reload } = useInbox();
@@ -19,7 +21,12 @@ export default function SentInvitationsScreen() {
     }, [reload]),
   );
 
-  const sent = invitations.filter((i) => i.direction === "outgoing");
+  // J'attends l'autre (!awaiting_me) ET l'invitation est encore active (pending/changes_requested).
+  const waiting = invitations.filter(
+    (i) =>
+      !i.awaiting_me &&
+      (i.status === "pending" || i.status === "changes_requested"),
+  );
 
   return (
     <View style={styles.container}>
@@ -36,7 +43,7 @@ export default function SentInvitationsScreen() {
         </Centered>
       ) : (
         <FlashList
-          data={sent}
+          data={waiting}
           keyExtractor={(i) => i.id}
           renderItem={({ item }) => (
             <InvitationRow
@@ -49,7 +56,10 @@ export default function SentInvitationsScreen() {
           onRefresh={onRefresh}
           ListEmptyComponent={
             <View style={styles.empty}>
-              <Text style={styles.muted}>You haven’t sent any invitations yet.</Text>
+              <Text style={styles.muted}>
+                No pending invitations. When you invite someone, it shows here
+                while you wait for their reply.
+              </Text>
             </View>
           }
         />

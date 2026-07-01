@@ -1,16 +1,21 @@
 import { ProfileLoadError, ProfileLoading } from "@/components/ProfileGate";
 import { FilterProvider } from "@/providers/filters";
+import { InboxBadgeProvider } from "@/providers/inbox-badge";
 import { LocationProvider } from "@/providers/location";
 import { ProfileProvider, useProfile } from "@/providers/profile";
 import { Stack } from "expo-router";
 
 export default function AppLayout() {
   // Les providers enveloppent la navigation ; AppNavigator lit le contexte en dessous.
+  // InboxBadgeProvider est ici (au-dessus des onglets ET des écrans poussés) pour que le badge
+  // de l'onglet Inbox soit visible partout et rafraîchi depuis l'écran Inbox.
   return (
     <ProfileProvider>
       <LocationProvider>
         <FilterProvider>
-          <AppNavigator />
+          <InboxBadgeProvider>
+            <AppNavigator />
+          </InboxBadgeProvider>
         </FilterProvider>
       </LocationProvider>
     </ProfileProvider>
